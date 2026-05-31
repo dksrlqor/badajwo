@@ -1,0 +1,25 @@
+{
+  "name": "받아줘",
+  "short_name": "받아줘",
+  "description": "익명으로 받는 디지털 손편지",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FAF1E1",
+  "theme_color": "#FAF1E1",
+  "lang": "ko",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

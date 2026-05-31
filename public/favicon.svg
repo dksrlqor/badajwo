@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#FBF0DC"/>
+  <!-- airmail border -->
+  <rect x="4" y="4" width="56" height="56" rx="8" fill="none" stroke="#C7443E" stroke-width="2" stroke-dasharray="3 2"/>
+  <!-- envelope -->
+  <rect x="10" y="18" width="44" height="30" rx="3" fill="#FCF6E6" stroke="#735F46" stroke-width="1.5"/>
+  <path d="M 10 18 L 32 36 L 54 18" fill="none" stroke="#735F46" stroke-width="1.5"/>
+  <!-- 받 mark -->
+  <text x="32" y="56" font-family="'Apple SD Gothic Neo', Georgia, serif" font-size="11" font-weight="700" fill="#3D2E22" text-anchor="middle">받</text>
+</svg>

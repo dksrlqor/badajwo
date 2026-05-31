@@ -3,12 +3,93 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>받아줘</title>
-    <meta name="description" content="말로 하기 어려운 마음, 링크로 받아줘." />
-    <meta name="theme-color" content="#FFF7EC" />
+
+    <!-- 기본 제목 + 설명 (검색결과 / 브라우저 탭) -->
+    <title>받아줘 — 익명으로 받는 디지털 손편지 | takemyletter.site</title>
+    <meta
+      name="description"
+      content="받아줘는 로그인 없이도 친구가 내 편지함으로 익명 손편지를 보낼 수 있는 빈티지 감성의 디지털 편지 서비스입니다. 인스타 스토리에 내 편지함 링크를 올리고 누구나 익명/이름으로 편지를 보내 주세요."
+    />
+    <meta
+      name="keywords"
+      content="받아줘, 받아줘 사이트, 받아줘 편지, 받아줘 링크, takemyletter, 익명 편지, 디지털 손편지, 빈티지 편지, 인스타 편지 링크, 나한테 편지 써줘"
+    />
+    <meta name="author" content="받아줘 (takemyletter.site)" />
+    <meta name="theme-color" content="#FAF1E1" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <link rel="canonical" href="https://takemyletter.site/" />
+
+    <!-- 아이콘 -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Open Graph (카카오톡 / Facebook / 인스타 미리보기) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="받아줘" />
+    <meta property="og:url" content="https://takemyletter.site/" />
+    <meta property="og:title" content="받아줘 — 익명으로 받는 디지털 손편지" />
+    <meta
+      property="og:description"
+      content="내 편지함 링크를 인스타 스토리에 올리면 친구가 익명으로 손편지를 보내요. 빈티지 종이 감성의 디지털 편지 서비스."
+    />
+    <meta property="og:image" content="https://takemyletter.site/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="받아줘 — 빈티지 항공우편 봉투" />
+    <meta property="og:locale" content="ko_KR" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="받아줘 — 익명으로 받는 디지털 손편지" />
+    <meta
+      name="twitter:description"
+      content="내 편지함 링크를 인스타 스토리에 올리면 친구가 익명으로 손편지를 보내요."
+    />
+    <meta name="twitter:image" content="https://takemyletter.site/og-image.png" />
+
+    <!-- 구조화 데이터 (JSON-LD) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "받아줘",
+        "alternateName": ["takemyletter", "받아줘 사이트", "받아줘 편지"],
+        "url": "https://takemyletter.site/",
+        "description": "익명으로 받는 디지털 손편지 서비스. 내 편지함 링크를 공유하면 친구가 익명 또는 이름으로 편지를 보냅니다.",
+        "inLanguage": "ko-KR",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://takemyletter.site/write?u={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "받아줘",
+        "url": "https://takemyletter.site/",
+        "applicationCategory": "CommunicationApplication",
+        "operatingSystem": "Web",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- 검색엔진 크롤러용 본문 fallback (JS 비활성 환경에서도 키워드/설명 노출) -->
+    <noscript>
+      <div style="padding: 40px; font-family: serif; color: #3D2E22; max-width: 600px; margin: 0 auto;">
+        <h1>받아줘</h1>
+        <p>받아줘는 로그인 없이도 친구가 내 편지함으로 익명 손편지를 보낼 수 있는 빈티지 감성의 디지털 편지 서비스입니다.</p>
+        <p>내 받아줘 편지함 링크를 인스타 스토리에 올리면, 누구나 익명 또는 이름으로 편지를 보내 줍니다. 받은 편지는 내 편지함에만 도착하고, 공개 여부는 직접 선택할 수 있습니다.</p>
+        <p>이 페이지는 JavaScript 가 필요합니다. 브라우저에서 JavaScript 를 활성화한 뒤 다시 열어 주세요.</p>
+        <p><a href="https://takemyletter.site/">받아줘 메인 페이지로</a></p>
+      </div>
+    </noscript>
   </body>
 </html>
