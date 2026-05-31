@@ -264,9 +264,6 @@ export default function Privacy() {
             <li>프로필 정보 수정</li>
             <li>동의 철회 요청</li>
           </ul>
-          <p className="mt-3">
-            위 요청은 서비스 내 기능 또는 운영자 문의를 통해 처리할 수 있습니다.
-          </p>
         </Section>
 
         <Section title="10. 쿠키 및 자동 수집 정보">
