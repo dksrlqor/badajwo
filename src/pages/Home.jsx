@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import MotionButton from '../components/MotionButton'
 import OpenLetterModal from '../components/OpenLetterModal'
+import { OrnamentLine, PaperStamp, Postmark } from '../components/VintageMail'
 
 // 받아줘 메인 — 종이 책상 위에 펼친 작은 스크랩북 한 페이지.
 // 큰 hero 섹션 대신 종이 라벨 + 마스킹테이프로 시작 화면을 잡는다.
@@ -96,7 +97,11 @@ export default function Home() {
           >
             받아줘
           </h1>
-          <div className="text-[10px] mt-1 tracking-widest" style={{ color: '#86705E' }}>
+          {/* 빈티지 ornament line — 받아줘 라벨 아래 장식 */}
+          <div className="flex justify-center mt-1.5 mb-1">
+            <OrnamentLine width={120} color="#86705E" />
+          </div>
+          <div className="text-[10px] mt-0.5 tracking-widest" style={{ color: '#86705E' }}>
             takemyletter.site
           </div>
         </motion.div>

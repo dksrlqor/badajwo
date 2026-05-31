@@ -1,9 +1,12 @@
 import BotanicDecor from './BotanicDecor'
+import PaperScraps from './PaperScraps'
 
 // 받아줘 메인 레이아웃 — 데스크 (body) 위에 scrapbook page 한 장 더.
+// PaperScraps 가 화면 모서리에 책장 조각/티켓/우표 콜라주를 깔아준다.
 export default function Layout({ children }) {
   return (
     <>
+      <PaperScraps />
       <BotanicDecor />
       <div className="min-h-full w-full flex justify-center">
         <div

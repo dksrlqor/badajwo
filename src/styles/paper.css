@@ -30,6 +30,10 @@
   --tape-yellow:  rgba(255, 232, 130, 0.78);
   --tape-mint:    rgba(180, 220, 200, 0.78);
   --tape-kraft:   rgba(220, 200, 170, 0.78);
+  --tape-sage:    rgba(178, 198, 168, 0.82);
+  --tape-orange:  rgba(232, 174, 130, 0.82);
+  --tape-blue:    rgba(170, 195, 218, 0.82);
+  --tape-rust:    rgba(196, 132, 98, 0.78);
 
   /* 포스트잇 */
   --postit-yellow:   #FCF096;
@@ -289,6 +293,42 @@
 .masking-tape.tape-kraft {
   background: repeating-linear-gradient(135deg, var(--tape-kraft) 0 6px, rgba(255,255,255,0.30) 6px 12px);
 }
+.masking-tape.tape-sage {
+  background: repeating-linear-gradient(135deg, var(--tape-sage) 0 6px, rgba(255,255,255,0.30) 6px 12px);
+}
+.masking-tape.tape-orange {
+  background: repeating-linear-gradient(135deg, var(--tape-orange) 0 6px, rgba(255,255,255,0.30) 6px 12px);
+}
+.masking-tape.tape-blue {
+  background: repeating-linear-gradient(135deg, var(--tape-blue) 0 6px, rgba(255,255,255,0.30) 6px 12px);
+}
+.masking-tape.tape-rust {
+  background: repeating-linear-gradient(135deg, var(--tape-rust) 0 6px, rgba(255,255,255,0.30) 6px 12px);
+}
+
+/* ─── 구겨진 종이 (crumpled) overlay ─────────────────── */
+.crumpled-paper {
+  position: relative;
+}
+.crumpled-paper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='3' seed='7'/><feDisplacementMap in='SourceGraphic' scale='4'/></filter><g filter='url(%23c)'><path d='M 30 50 Q 80 30 130 60 Q 180 80 220 50 Q 270 30 310 70' stroke='rgba(92,62,40,0.10)' stroke-width='0.8' fill='none'/><path d='M 0 130 Q 70 110 140 150 Q 210 180 290 140' stroke='rgba(92,62,40,0.08)' stroke-width='0.6' fill='none'/><path d='M 20 220 Q 80 240 160 215 Q 240 195 320 230' stroke='rgba(92,62,40,0.09)' stroke-width='0.7' fill='none'/><path d='M 80 0 L 100 90' stroke='rgba(92,62,40,0.06)' stroke-width='0.5' fill='none'/><path d='M 220 30 L 245 140' stroke='rgba(92,62,40,0.06)' stroke-width='0.5' fill='none'/><path d='M 60 260 L 90 320' stroke='rgba(92,62,40,0.07)' stroke-width='0.5' fill='none'/><path d='M 280 180 L 270 290' stroke='rgba(92,62,40,0.07)' stroke-width='0.5' fill='none'/></g></svg>");
+  background-size: 320px 320px;
+  mix-blend-mode: multiply;
+  opacity: 0.6;
+}
+
+/* ─── 빈티지 ornament line — 우아한 곡선 장식 ─────────── */
+.ornament-line {
+  display: inline-block;
+  vertical-align: middle;
+}
 
 /* ─── 종이 라벨 버튼 / 마스킹테이프 버튼 ──────────────── */
 
@@ -415,7 +455,14 @@
   pointer-events: none;
   z-index: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 36px rgba(92, 62, 40, 0.08);
+  box-shadow: inset 0 0 36px rgba(92, 62, 40, 0.10);
+  /* 구겨진 종이 fold lines 추가 */
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='600' preserveAspectRatio='none'><g><path d='M 50 80 Q 150 60 250 100 Q 320 130 380 90' stroke='rgba(92,62,40,0.10)' stroke-width='0.7' fill='none'/><path d='M 0 220 Q 100 200 200 240 Q 300 260 400 230' stroke='rgba(92,62,40,0.09)' stroke-width='0.6' fill='none'/><path d='M 30 380 Q 130 400 230 375 Q 330 360 400 390' stroke='rgba(92,62,40,0.10)' stroke-width='0.7' fill='none'/><path d='M 60 520 Q 160 540 260 510 Q 340 490 400 530' stroke='rgba(92,62,40,0.08)' stroke-width='0.6' fill='none'/><path d='M 120 0 L 140 130' stroke='rgba(92,62,40,0.07)' stroke-width='0.5' fill='none'/><path d='M 280 30 L 305 170' stroke='rgba(92,62,40,0.07)' stroke-width='0.5' fill='none'/><path d='M 80 280 L 100 410' stroke='rgba(92,62,40,0.08)' stroke-width='0.5' fill='none'/><path d='M 340 230 L 320 380' stroke='rgba(92,62,40,0.07)' stroke-width='0.5' fill='none'/><path d='M 60 450 L 80 600' stroke='rgba(92,62,40,0.08)' stroke-width='0.5' fill='none'/><path d='M 360 460 L 340 600' stroke='rgba(92,62,40,0.07)' stroke-width='0.5' fill='none'/></g></svg>");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  mix-blend-mode: multiply;
+  opacity: 0.55;
 }
 .scrapbook-page > * { position: relative; z-index: 1; }
 

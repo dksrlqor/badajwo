@@ -220,15 +220,52 @@ export default function CreateLetter() {
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.35 }}
     >
-      <div className="flex items-center mb-6">
+      <div className="flex items-center mb-5">
         <button
           onClick={() => (step === 1 ? navigate('/') : prev())}
-          className="text-ink-700 text-sm px-2 py-1 -ml-2 hover:text-ink-900"
+          className="text-sm px-2 py-1 -ml-2"
+          style={{
+            color: '#5A4538',
+            textDecoration: 'underline dashed rgba(92,62,40,0.32)',
+            textUnderlineOffset: 4
+          }}
         >
           ← 뒤로
         </button>
-        <div className="flex-1 text-center text-sm font-medium text-ink-700">
-          편지 만들기
+        <div className="flex-1 flex justify-center">
+          {/* 마스킹테이프 + 종이 라벨로 페이지 제목 */}
+          <div
+            className="relative inline-block px-4 py-1.5"
+            style={{
+              background: '#FBF0DC',
+              borderRadius: '4px 6px 5px 7px',
+              boxShadow:
+                '0 1px 0 rgba(255,255,255,0.6) inset, 0 1px 3px rgba(92,62,40,0.10)',
+              transform: 'rotate(-1deg)'
+            }}
+          >
+            <div
+              aria-hidden
+              className="masking-tape tape-sage"
+              style={{
+                width: 50,
+                height: 10,
+                top: -5,
+                left: '50%',
+                transform: 'translateX(-50%) rotate(-3deg)'
+              }}
+            />
+            <span
+              className="text-[13px] font-semibold"
+              style={{
+                color: '#3D2E22',
+                fontFamily: "'Apple SD Gothic Neo', Georgia, serif",
+                letterSpacing: '0.04em'
+              }}
+            >
+              편지 만들기
+            </span>
+          </div>
         </div>
         <div className="w-12" />
       </div>
@@ -330,14 +367,57 @@ export default function CreateLetter() {
   )
 }
 
+// 작은 스크랩북 스타일 step 헤더 — 마스킹테이프 + 손글씨 제목 + 점선 ornament
+function StepHeader({ title, sub, tape = 'sage', rotate = -0.8 }) {
+  return (
+    <div className="mb-5 relative" style={{ transform: `rotate(${rotate}deg)` }}>
+      <div
+        aria-hidden
+        className={`masking-tape tape-${tape}`}
+        style={{
+          width: 64,
+          height: 14,
+          top: -6,
+          left: -8,
+          transform: 'rotate(-8deg)'
+        }}
+      />
+      <h2
+        className="text-[18px] font-bold mb-1"
+        style={{
+          color: '#3D2E22',
+          fontFamily: "'Apple SD Gothic Neo', Georgia, serif",
+          letterSpacing: '0.01em',
+          paddingTop: 4
+        }}
+      >
+        {title}
+      </h2>
+      {sub && (
+        <p
+          className="text-[12px] leading-relaxed"
+          style={{
+            color: '#86705E',
+            borderBottom: '1px dashed rgba(92,62,40,0.20)',
+            paddingBottom: 8
+          }}
+        >
+          {sub}
+        </p>
+      )}
+    </div>
+  )
+}
+
 // ─── Step 1 ──────────────────────────────────────────────
 function Step1({ data, update, lockReceiver }) {
   return (
     <div>
-      <h2 className="text-lg font-bold text-ink-900 mb-1">받는 사람</h2>
-      <p className="text-xs text-ink-500 mb-5">
-        누구에게 어떤 이름으로 보낼지 정해주세요.
-      </p>
+      <StepHeader
+        title="받는 사람"
+        sub="누구에게 어떤 이름으로 보낼지 정해주세요."
+        tape="sage"
+      />
       <div className="space-y-4">
         <div>
           <label className="label">받는 사람 이름</label>
@@ -387,10 +467,12 @@ function Step1({ data, update, lockReceiver }) {
 function Step2({ data, update }) {
   return (
     <div>
-      <h2 className="text-lg font-bold text-ink-900 mb-1">편지지</h2>
-      <p className="text-xs text-ink-500 mb-5">
-        편지지를 고르고, 천천히 마음을 적어보세요.
-      </p>
+      <StepHeader
+        title="편지지"
+        sub="편지지를 고르고, 천천히 마음을 적어보세요."
+        tape="orange"
+        rotate={0.6}
+      />
 
       <div className="space-y-5">
         <div>
@@ -467,10 +549,12 @@ function Step3({ data, updatePhoto, onPick, onRemove, onAdjust, processing }) {
   const hasPhoto = !!data.photo.src
   return (
     <div>
-      <h2 className="text-lg font-bold text-ink-900 mb-1">폴라로이드 사진</h2>
-      <p className="text-xs text-ink-500 mb-5">
-        편지에 함께 보낼 사진을 한 장 골라보세요. 없어도 괜찮아요.
-      </p>
+      <StepHeader
+        title="폴라로이드 사진"
+        sub="편지에 함께 보낼 사진을 한 장 골라보세요. 없어도 괜찮아요."
+        tape="blue"
+        rotate={-0.6}
+      />
 
       {!hasPhoto ? (
         <div className="text-center py-2">
@@ -571,10 +655,12 @@ function Step3({ data, updatePhoto, onPick, onRemove, onAdjust, processing }) {
 function Step4({ data, update }) {
   return (
     <div>
-      <h2 className="text-lg font-bold text-ink-900 mb-1">음악과 잠금</h2>
-      <p className="text-xs text-ink-500 mb-5">
-        받는 사람이 음악과 함께 편지를 읽을 수 있어요.
-      </p>
+      <StepHeader
+        title="음악과 잠금"
+        sub="받는 사람이 음악과 함께 편지를 읽을 수 있어요."
+        tape="rust"
+        rotate={0.4}
+      />
 
       <div className="space-y-5">
         <div>
@@ -687,10 +773,12 @@ function Step5({ data }) {
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-ink-900 mb-1">미리보기</h2>
-      <p className="text-xs text-ink-500 mb-5">
-        받는 사람에게는 이렇게 보여요.
-      </p>
+      <StepHeader
+        title="미리보기"
+        sub="받는 사람에게는 이렇게 보여요."
+        tape="kraft"
+        rotate={-0.4}
+      />
 
       <div className="space-y-4">
         {hasMusic && (

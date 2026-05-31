@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import MotionButton from '../components/MotionButton'
-import SoftCard from '../components/SoftCard'
 import Toast from '../components/Toast'
+import { AirmailBorder, PaperStamp, Postmark, OrnamentLine } from '../components/VintageMail'
 
+// 편지 링크가 만들어진 직후 — 봉투에 담긴 편지가 책상 위에 놓인 화면.
+// airmail 봉투 + 우표 + 우편 소인 + 마스킹테이프로 "이제 보낼 준비가 됐다" 느낌.
 export default function Complete() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -35,7 +37,7 @@ export default function Complete() {
         document.body.removeChild(t)
         if (!ok) throw new Error('execCommand copy failed')
       }
-      showToast('링크를 복사했어요')
+      showToast('복사됐어요. 이제 마음을 보내면 돼요.')
     } catch (e) {
       showToast('복사에 실패했어요. 링크를 직접 선택해주세요.')
     }
@@ -46,28 +48,159 @@ export default function Complete() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.4 }}
-      className="pt-10"
+      transition={{ duration: 0.45 }}
+      className="pt-6"
     >
+      {/* 헤더 — 손글씨 + ornament */}
       <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
+        initial={{ scale: 0.92, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 16 }}
-        className="text-center mb-7"
+        transition={{ delay: 0.1, type: 'spring', stiffness: 180, damping: 18 }}
+        className="text-center mb-6"
       >
-        <div className="text-5xl mb-3">💌</div>
-        <h1 className="text-xl font-bold text-ink-900">
-          링크가 만들어졌어요.
+        <h1
+          className="text-[22px] font-bold"
+          style={{
+            color: '#3D2E22',
+            fontFamily: "'Apple SD Gothic Neo', Georgia, serif",
+            letterSpacing: '0.01em'
+          }}
+        >
+          편지가 봉투에 담겼어요
         </h1>
-        <p className="text-sm text-ink-500 mt-2">
-          받는 사람에게 이 링크를 전해주세요.
+        <div className="flex justify-center mt-2 mb-2">
+          <OrnamentLine width={110} color="#86705E" />
+        </div>
+        <p className="text-[12px] leading-relaxed" style={{ color: '#86705E' }}>
+          이 링크를 복사해서 상대에게 보내주세요.
         </p>
       </motion.div>
 
-      <SoftCard className="mb-5">
-        <div className="text-xs text-ink-500 mb-2">생성된 링크</div>
+      {/* 봉투 (airmail border 안쪽에 우표 + 소인 + To. 라벨) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12, rotate: -1.2 }}
+        animate={{ opacity: 1, y: 0, rotate: -1.2 }}
+        transition={{ delay: 0.25, duration: 0.5 }}
+        className="mb-7 relative"
+        style={{ transformOrigin: 'center' }}
+      >
+        {/* 봉투 위 마스킹테이프 */}
         <div
-          className="text-sm text-ink-900 break-all bg-cream-50 rounded-2xl p-3 border border-cream-200 select-all"
+          aria-hidden
+          className="masking-tape tape-kraft"
+          style={{
+            width: 70,
+            height: 18,
+            top: -10,
+            left: '12%',
+            transform: 'rotate(-12deg)'
+          }}
+        />
+        <div
+          aria-hidden
+          className="masking-tape tape-sage"
+          style={{
+            width: 60,
+            height: 16,
+            top: -8,
+            right: '14%',
+            transform: 'rotate(10deg)'
+          }}
+        />
+
+        <AirmailBorder borderWidth={9} innerPadding={20} background="#FCF6E6">
+          <div className="relative" style={{ minHeight: 130 }}>
+            {/* 우상단 우표 */}
+            <div style={{ position: 'absolute', top: -4, right: -4 }}>
+              <PaperStamp variant="leaf" size={56} rotation={4} />
+            </div>
+            {/* 우상단 소인 — 우표 위로 살짝 겹침 */}
+            <div style={{ position: 'absolute', top: 18, right: 40 }}>
+              <Postmark size={70} rotation={-14} city="SEOUL" />
+            </div>
+
+            {/* To. 받는 사람 라벨 위치 (실제 받는 이름은 노출 안 함 — 봉투 미감만) */}
+            <div style={{ position: 'absolute', left: 4, top: 14 }}>
+              <span
+                className="paper-label"
+                style={{ background: '#F8EFD8', fontSize: 10 }}
+              >
+                AIR MAIL · PAR AVION
+              </span>
+            </div>
+
+            {/* 봉투 중앙 — 손글씨 To. */}
+            <div
+              style={{
+                position: 'absolute',
+                left: 8,
+                bottom: 6,
+                color: '#3D2E22',
+                fontFamily: "'Apple SD Gothic Neo', Georgia, serif"
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  color: '#86705E',
+                  letterSpacing: '0.18em'
+                }}
+              >
+                TO.
+              </div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  marginTop: 2,
+                  borderBottom: '1px solid rgba(92,62,40,0.4)',
+                  paddingBottom: 2,
+                  minWidth: 140,
+                  fontFamily: 'Georgia, serif',
+                  fontStyle: 'italic'
+                }}
+              >
+                받는 사람에게
+              </div>
+            </div>
+          </div>
+        </AirmailBorder>
+      </motion.div>
+
+      {/* 링크 — 작은 메모 종이 위에 적힌 듯 */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.4 }}
+        className="relative mx-1 mb-6"
+        style={{
+          background: '#FBF0DC',
+          padding: '14px 14px 12px',
+          borderRadius: '4px 6px 5px 7px',
+          boxShadow:
+            '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 4px rgba(92,62,40,0.10), 0 8px 18px rgba(92,62,40,0.10)',
+          transform: 'rotate(0.6deg)'
+        }}
+      >
+        <div
+          aria-hidden
+          className="masking-tape tape-blue"
+          style={{
+            width: 50,
+            height: 14,
+            top: -6,
+            left: 14,
+            transform: 'rotate(-8deg)'
+          }}
+        />
+        <div
+          className="text-[10px] mb-2"
+          style={{ color: '#86705E', letterSpacing: '0.18em' }}
+        >
+          편지 링크
+        </div>
+        <div
+          className="text-[13px] break-all select-all"
           onClick={(e) => {
             const range = document.createRange()
             range.selectNodeContents(e.currentTarget)
@@ -75,14 +208,22 @@ export default function Complete() {
             sel.removeAllRanges()
             sel.addRange(range)
           }}
+          style={{
+            color: '#3D2E22',
+            fontFamily: 'Georgia, serif',
+            lineHeight: 1.5,
+            borderBottom: '1px dashed rgba(92,62,40,0.32)',
+            paddingBottom: 6
+          }}
         >
           {link}
         </div>
-      </SoftCard>
+      </motion.div>
 
+      {/* 버튼 */}
       <div className="space-y-3">
         <MotionButton variant="primary" onClick={copy}>
-          링크 복사하기
+          편지 링크 복사하기
         </MotionButton>
         <MotionButton variant="soft" onClick={() => navigate(`/view/${id}?preview=1`)}>
           미리보기로 보기
