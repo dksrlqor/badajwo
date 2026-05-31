@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion'
 
-// 받아줘 종이 카드. 흰색 카드가 아니라 따뜻한 아이보리 종이 결.
-// paper-texture 클래스가 pseudo-element 로 빛 spot 2개를 얹어준다.
+// 받아줘 종이 카드. 비대칭 모서리 + 종이 결 + 가장자리 wear + 부드러운 그림자.
+// paper.css 의 .paper-card 가 모든 시각 효과를 담당.
 export default function SoftCard({
   children,
   className = '',
   hover = false,
+  tilt = null, // 'left' | 'right' | null
   ...props
 }) {
   const hoverProps = hover
@@ -14,10 +15,16 @@ export default function SoftCard({
         transition: { type: 'spring', stiffness: 300, damping: 22 }
       }
     : {}
+  const tiltClass =
+    tilt === 'left'
+      ? 'paper-card-tilt-left'
+      : tilt === 'right'
+      ? 'paper-card-tilt-right'
+      : ''
   return (
     <motion.div
       {...hoverProps}
-      className={`relative bg-paper-ivory rounded-3xl shadow-paper p-6 sm:p-7 paper-texture ${className}`}
+      className={`paper-card ${tiltClass} p-6 sm:p-7 ${className}`}
       {...props}
     >
       {children}

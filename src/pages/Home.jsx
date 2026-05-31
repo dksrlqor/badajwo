@@ -4,9 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import MotionButton from '../components/MotionButton'
 import OpenLetterModal from '../components/OpenLetterModal'
 
-// 받아줘 메인 화면.
-// MVP 단계에서는 로그인이 필요 없어서 헤더/계정 진입점은 모두 숨겼다.
-// 사용자가 들어오면 곧장 "편지 쓰기" / "받은 편지 열기" 로 이어진다.
+// 받아줘 메인 — 종이 책상 위에 펼친 작은 스크랩북 한 페이지.
+// 큰 hero 섹션 대신 종이 라벨 + 마스킹테이프로 시작 화면을 잡는다.
 
 const pageVariants = {
   initial: { opacity: 0, y: 16 },
@@ -27,21 +26,55 @@ export default function Home() {
       transition={{ duration: 0.4, ease: 'easeOut' }}
       className="flex flex-col min-h-[85vh]"
     >
-      <div className="flex-1 flex flex-col items-center justify-center text-center w-full pt-6">
-        <motion.h1
-          initial={{ scale: 0.96, opacity: 0 }}
+      <div className="flex-1 flex flex-col items-center justify-center text-center w-full pt-4">
+
+        {/* 종이 라벨 위에 손글씨처럼 적힌 받아줘 */}
+        <motion.div
+          initial={{ scale: 0.94, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="text-[28px] font-bold tracking-tight text-ink-900 mb-3"
+          className="relative inline-block mb-8 px-8 py-6"
+          style={{
+            background: '#FDF8EE',
+            borderRadius: '14px 10px 16px 12px',
+            boxShadow:
+              '0 1px 0 rgba(255,255,255,0.7) inset, 0 2px 5px rgba(92,62,40,0.10), 0 16px 36px rgba(92,62,40,0.14)',
+            transform: 'rotate(-1.4deg)'
+          }}
         >
-          받아줘
-        </motion.h1>
+          {/* 마스킹테이프 — 종이 라벨을 책상에 붙인 느낌 */}
+          <div
+            aria-hidden
+            className="masking-tape tape-kraft"
+            style={{
+              width: 70,
+              top: -10,
+              left: '50%',
+              transform: 'translateX(-50%) rotate(-6deg)'
+            }}
+          />
+          <h1
+            className="text-[34px] font-bold tracking-tight"
+            style={{
+              color: '#3D2E22',
+              fontFamily:
+                "'Apple SD Gothic Neo', 'Malgun Gothic', Georgia, serif",
+              letterSpacing: '0.02em'
+            }}
+          >
+            받아줘
+          </h1>
+          <div className="text-[10px] mt-1 tracking-widest" style={{ color: '#86705E' }}>
+            takemyletter.site
+          </div>
+        </motion.div>
 
         <motion.p
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.15 }}
-          className="text-sm text-ink-700 mb-2"
+          className="text-base mb-1"
+          style={{ color: '#3D2E22' }}
         >
           말로 하기 어려운 마음을, 편지로 받아줘.
         </motion.p>
@@ -49,7 +82,8 @@ export default function Home() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.25 }}
-          className="text-xs text-ink-500 mb-10"
+          className="text-xs mb-12"
+          style={{ color: '#86705E' }}
         >
           링크로 전하는 디지털 손편지
         </motion.p>
@@ -58,7 +92,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="w-full space-y-3"
+          className="w-full space-y-4"
         >
           <MotionButton
             variant="primary"
@@ -66,7 +100,7 @@ export default function Home() {
           >
             편지 쓰기
           </MotionButton>
-          <MotionButton variant="soft" onClick={() => navigate('/ask')}>
+          <MotionButton variant="accent" onClick={() => navigate('/ask')}>
             나한테 편지 써줘
           </MotionButton>
           <MotionButton variant="soft" onClick={() => setOpenModal(true)}>
@@ -76,20 +110,22 @@ export default function Home() {
 
         <button
           onClick={() => navigate('/create/diary')}
-          className="mt-6 text-xs text-ink-500 underline underline-offset-4 hover:text-ink-700"
+          className="mt-8 text-xs underline underline-offset-4"
+          style={{ color: '#86705E', textDecorationStyle: 'dashed' }}
         >
           다이어리 만들기
         </button>
 
+        {/* 종이 탭 안내 */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 w-full"
+          transition={{ delay: 0.55 }}
+          className="mt-10 w-full"
         >
           <div
             className="paper-tab w-full justify-center !py-3"
-            style={{ borderRadius: 16 }}
+            style={{ borderRadius: 14 }}
           >
             <span className="text-base mr-1">🕊</span>
             <span className="text-xs leading-relaxed">

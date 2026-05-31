@@ -1,21 +1,83 @@
 import { motion } from 'framer-motion'
 
 // 받아줘 종이 라벨 버튼.
-// SaaS primary 컬러 대신 잉크/블러쉬/종이 톤으로 통일.
-// hover 시 살짝 떠오르고, tap 시 종이가 살짝 눌리는 느낌.
-const styles = {
-  // 잉크 라벨 — primary CTA
-  primary:
-    'bg-ink-900 text-paper-ivory border border-ink-900/15 shadow-paper hover:bg-ink-700 disabled:bg-ink-300 disabled:border-transparent',
-  // 블러쉬 종이 라벨 — accent (감성 CTA)
-  accent:
-    'bg-accent-pinkDeep text-white border border-blush-500/35 shadow-paper hover:brightness-[1.04] disabled:bg-accent-pink disabled:border-transparent',
-  // 종이 카드 버튼 — soft secondary
-  soft:
-    'bg-paper-ivory text-ink-700 border border-ink-900/10 shadow-paper-sm hover:bg-paper-cream hover:shadow-paper',
-  // 텍스트 + 부드러운 underline — ghost
-  ghost:
-    'bg-transparent text-ink-500 hover:text-ink-900 underline underline-offset-[6px] decoration-ink-900/20 hover:decoration-ink-900/40 decoration-1 font-medium shadow-none'
+// SaaS primary 컬러 대신 잉크/종이/마스킹테이프 톤으로 통일.
+// 모든 variant 는 paper.css 의 .stationery-button / .tape-button 톤을 따른다.
+const variants = {
+  // 잉크 라벨 (primary CTA)
+  primary: {
+    className:
+      'inline-flex items-center justify-center w-full text-base font-semibold select-none disabled:cursor-not-allowed disabled:opacity-60',
+    style: {
+      background: '#3D2E22',
+      color: '#FDF8EE',
+      border: '1.5px dashed rgba(255, 248, 235, 0.20)',
+      borderRadius: '6px 4px 8px 5px',
+      padding: '14px 22px',
+      boxShadow:
+        '0 1px 0 rgba(255,255,255,0.12) inset, 0 2px 4px rgba(92, 62, 40, 0.18), 0 14px 32px rgba(92, 62, 40, 0.18)'
+    }
+  },
+  // 빈티지 핑크 마스킹테이프 (감성 CTA)
+  accent: {
+    className:
+      'inline-flex items-center justify-center w-full font-semibold text-base text-ink-900 select-none disabled:cursor-not-allowed disabled:opacity-60',
+    style: {
+      background:
+        'repeating-linear-gradient(135deg, rgba(248, 200, 215, 0.92) 0 8px, rgba(255,255,255,0.32) 8px 16px)',
+      color: '#3D2E22',
+      border: 'none',
+      borderRadius: 0,
+      padding: '14px 22px',
+      boxShadow:
+        '0 2px 5px rgba(92, 62, 40, 0.18), 0 8px 22px rgba(92, 62, 40, 0.12)',
+      transform: 'rotate(-1deg)'
+    }
+  },
+  // 종이 카드 라벨 (secondary)
+  soft: {
+    className:
+      'inline-flex items-center justify-center w-full font-semibold text-base select-none disabled:cursor-not-allowed disabled:opacity-60',
+    style: {
+      background: '#FDF8EE',
+      color: '#3D2E22',
+      border: '1.5px dashed rgba(92, 62, 40, 0.28)',
+      borderRadius: '5px 8px 4px 6px',
+      padding: '14px 22px',
+      boxShadow:
+        '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 4px rgba(92, 62, 40, 0.10), 0 10px 24px rgba(92, 62, 40, 0.08)'
+    }
+  },
+  // 텍스트 + dashed underline (조용한 액션)
+  ghost: {
+    className:
+      'inline-flex items-center justify-center w-full text-sm font-medium select-none disabled:cursor-not-allowed disabled:opacity-60',
+    style: {
+      background: 'transparent',
+      color: '#5A4538',
+      border: 'none',
+      padding: '12px 16px',
+      textDecoration: 'underline dashed rgba(92, 62, 40, 0.40)',
+      textUnderlineOffset: 6,
+      textDecorationThickness: 1
+    }
+  },
+  // 노란 마스킹테이프 (Tape 변종)
+  tape: {
+    className:
+      'inline-flex items-center justify-center w-full font-semibold text-base text-ink-900 select-none disabled:cursor-not-allowed disabled:opacity-60',
+    style: {
+      background:
+        'repeating-linear-gradient(135deg, rgba(255, 232, 130, 0.92) 0 8px, rgba(255,255,255,0.32) 8px 16px)',
+      color: '#3D2E22',
+      border: 'none',
+      borderRadius: 0,
+      padding: '14px 22px',
+      boxShadow:
+        '0 2px 5px rgba(92, 62, 40, 0.18), 0 8px 22px rgba(92, 62, 40, 0.12)',
+      transform: 'rotate(1deg)'
+    }
+  }
 }
 
 export default function MotionButton({
@@ -24,17 +86,18 @@ export default function MotionButton({
   variant = 'primary',
   type = 'button',
   disabled,
+  style: extraStyle = {},
   ...props
 }) {
-  const base =
-    'inline-flex items-center justify-center w-full rounded-2xl px-5 py-4 text-base font-semibold transition-colors select-none disabled:cursor-not-allowed'
+  const v = variants[variant] || variants.primary
   return (
     <motion.button
       type={type}
       whileTap={disabled ? undefined : { scale: 0.96 }}
       whileHover={disabled ? undefined : { y: -1 }}
       transition={{ type: 'spring', stiffness: 400, damping: 24 }}
-      className={`${base} ${styles[variant]} ${className}`}
+      className={`${v.className} ${className}`}
+      style={{ ...v.style, ...extraStyle }}
       disabled={disabled}
       {...props}
     >
