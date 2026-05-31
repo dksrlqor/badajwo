@@ -1,35 +1,26 @@
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { useNavigate, Link } from 'react-router-dom'
 import MotionButton from '../components/MotionButton'
-import OpenLetterModal from '../components/OpenLetterModal'
-import { OrnamentLine, PaperStamp, Postmark } from '../components/VintageMail'
+import { useAuth } from '../context/AuthContext'
+import { OrnamentLine } from '../components/VintageMail'
 
-// 받아줘 메인 — 종이 책상 위에 펼친 작은 스크랩북 한 페이지.
-// 큰 hero 섹션 대신 종이 라벨 + 마스킹테이프로 시작 화면을 잡는다.
-
-const pageVariants = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 }
-}
-
+// 받아줘 메인 — 빈티지 종이 라벨 + 두 갈래 CTA
+//   1) 편지 쓰러 가기 (로그인 없이) → /write
+//   2) 내 편지함 만들기 (로그인) → /login or /me
 export default function Home() {
   const navigate = useNavigate()
-  const [openModal, setOpenModal] = useState(false)
+  const { user } = useAuth()
 
   return (
     <motion.div
-      variants={pageVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={{ duration: 0.4, ease: 'easeOut' }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.4 }}
       className="flex flex-col min-h-[85vh]"
     >
       <div className="flex-1 flex flex-col items-center justify-center text-center w-full pt-4">
-
-        {/* 종이 라벨 위에 손글씨처럼 적힌 받아줘 */}
+        {/* 종이 라벨 — 받아줘 */}
         <motion.div
           initial={{ scale: 0.94, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -43,7 +34,6 @@ export default function Home() {
             transform: 'rotate(-1.4deg)'
           }}
         >
-          {/* 마스킹테이프 — 종이 라벨을 책상에 붙인 느낌 */}
           <div
             aria-hidden
             className="masking-tape tape-kraft"
@@ -54,7 +44,6 @@ export default function Home() {
               transform: 'translateX(-50%) rotate(-6deg)'
             }}
           />
-          {/* 종이 클립 — 좌상단에 살짝 걸쳐진 듯한 SVG */}
           <svg
             aria-hidden
             width="28"
@@ -65,8 +54,7 @@ export default function Home() {
               top: -14,
               left: -8,
               transform: 'rotate(-22deg)',
-              filter:
-                'drop-shadow(0 2px 4px rgba(92, 62, 40, 0.30))'
+              filter: 'drop-shadow(0 2px 4px rgba(92, 62, 40, 0.30))'
             }}
           >
             <path
@@ -77,27 +65,17 @@ export default function Home() {
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-            <path
-              d="M 9 4 L 9 30 Q 9 36 14 36 Q 19 36 19 30 L 19 10"
-              fill="none"
-              stroke="#D6DADE"
-              strokeWidth="0.8"
-              strokeLinecap="round"
-              opacity="0.9"
-            />
           </svg>
           <h1
             className="text-[34px] font-bold tracking-tight"
             style={{
               color: '#3D2E22',
-              fontFamily:
-                "'Apple SD Gothic Neo', 'Malgun Gothic', Georgia, serif",
+              fontFamily: "'Apple SD Gothic Neo', 'Malgun Gothic', Georgia, serif",
               letterSpacing: '0.02em'
             }}
           >
             받아줘
           </h1>
-          {/* 빈티지 ornament line — 받아줘 라벨 아래 장식 */}
           <div className="flex justify-center mt-1.5 mb-1">
             <OrnamentLine width={120} color="#86705E" />
           </div>
@@ -125,6 +103,7 @@ export default function Home() {
           링크로 전하는 디지털 손편지
         </motion.p>
 
+        {/* CTA 두 갈래 */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -133,27 +112,19 @@ export default function Home() {
         >
           <MotionButton
             variant="primary"
-            onClick={() => navigate('/create/letter')}
+            onClick={() => navigate('/write')}
           >
-            편지 쓰기
+            편지 쓰러 가기
           </MotionButton>
-          <MotionButton variant="accent" onClick={() => navigate('/ask')}>
-            나한테 편지 써줘
-          </MotionButton>
-          <MotionButton variant="soft" onClick={() => setOpenModal(true)}>
-            받은 편지 열기
+          <MotionButton
+            variant="accent"
+            onClick={() => navigate(user?.username ? '/me' : '/login')}
+          >
+            {user?.username ? `@${user.username} 으로 가기` : '내 편지함 만들기'}
           </MotionButton>
         </motion.div>
 
-        <button
-          onClick={() => navigate('/create/diary')}
-          className="mt-8 text-xs underline underline-offset-4"
-          style={{ color: '#86705E', textDecorationStyle: 'dashed' }}
-        >
-          다이어리 만들기
-        </button>
-
-        {/* 종이 탭 안내 */}
+        {/* 하단 안내바 */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -161,22 +132,27 @@ export default function Home() {
           className="mt-10 w-full"
         >
           <div
-            className="paper-tab w-full justify-center !py-3"
-            style={{ borderRadius: 14 }}
+            className="px-4 py-3 text-[11px] leading-relaxed text-center"
+            style={{
+              background: 'rgba(255, 252, 245, 0.7)',
+              color: '#5A4538',
+              border: '1px dashed rgba(92, 62, 40, 0.20)',
+              borderRadius: '5px 7px 4px 6px'
+            }}
           >
-            <span className="text-base mr-1">🕊</span>
-            <span className="text-xs leading-relaxed">
-              로그인 없이도 편지를 만들고 보낼 수 있어요.
-            </span>
+            로그인 없이도 편지를 보낼 수 있어요. 이름을 적지 않으면 익명으로 전달되며,
+            개인정보는 동의 없이 공개되지 않아요.
+            <br />
+            <Link
+              to="/privacy"
+              className="inline-block mt-1 underline"
+              style={{ color: '#5A4538', textUnderlineOffset: 3 }}
+            >
+              개인정보 처리방침
+            </Link>
           </div>
         </motion.div>
       </div>
-
-      <AnimatePresence>
-        {openModal && (
-          <OpenLetterModal onClose={() => setOpenModal(false)} />
-        )}
-      </AnimatePresence>
     </motion.div>
   )
 }

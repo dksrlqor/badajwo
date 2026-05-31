@@ -1,39 +1,24 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import RecipientLayout from './components/RecipientLayout'
 import Home from './pages/Home'
-import CreateLetter from './pages/CreateLetter'
-import CreateDiary from './pages/CreateDiary'
-import Complete from './pages/Complete'
-import ViewPage from './pages/ViewPage'
-import AskSetup from './pages/AskSetup'
-import AskLink from './pages/AskLink'
+import Login from './pages/Login'
+import Onboarding from './pages/Onboarding'
+import Me from './pages/Me'
+import UserWrite from './pages/UserWrite'
+import Write from './pages/Write'
+import LetterDetail from './pages/LetterDetail'
+import Privacy from './pages/Privacy'
 
-// 현재 MVP 에서는 로그인 기능을 노출하지 않는다.
-// 로그인 관련 페이지 파일은 보존하되 라우트만 빼서, 추후 백엔드 연동 시
-// 다시 import / Route 만 부활시키면 됨.
-//   import Login from './pages/Login'
-//   import SetupAccount from './pages/SetupAccount'
-//   import MyAccount from './pages/MyAccount'
-//   import Inbox from './pages/Inbox'
-//   import Archive from './pages/Archive'
-//   import Feed from './pages/Feed'
+// 받아줘 — 새 라우트 구조.
+// 메인 플로우는 "프로필 링크 (/u/:username) → 친구가 받는 사람 편지함에 직접 전송".
+// 옛 메인 플로우 (편지 만들고 링크 생성해서 상대에게 보내기) 는 제거.
 
 export default function App() {
   const location = useLocation()
   return (
     <Routes location={location}>
-      {/* 수신자 전용 — 메인 UI 없이 봉투/편지 + 하단 작은 탭만 */}
-      <Route
-        path="/view/:id"
-        element={
-          <RecipientLayout>
-            <ViewPage />
-          </RecipientLayout>
-        }
-      />
-
-      {/* 메인(작성자) — 일반 Layout */}
+      {/* 메인 (공개) */}
       <Route
         path="/"
         element={
@@ -43,62 +28,85 @@ export default function App() {
         }
       />
       <Route
-        path="/create/letter"
+        path="/write"
         element={
           <Layout>
-            <CreateLetter />
+            <Write />
           </Layout>
         }
       />
       <Route
-        path="/create/diary"
+        path="/login"
         element={
           <Layout>
-            <CreateDiary />
+            <Login />
           </Layout>
         }
       />
       <Route
-        path="/complete/:id"
+        path="/onboarding"
         element={
           <Layout>
-            <Complete />
+            <Onboarding />
+          </Layout>
+        }
+      />
+      <Route
+        path="/privacy"
+        element={
+          <Layout>
+            <Privacy />
           </Layout>
         }
       />
 
-      {/* "나한테 편지 써줘" 흐름 */}
+      {/* 로그인 사용자 본인 대시보드 */}
       <Route
-        path="/ask"
+        path="/me"
         element={
           <Layout>
-            <AskSetup />
-          </Layout>
-        }
-      />
-      <Route
-        path="/ask/:id"
-        element={
-          <Layout>
-            <AskLink />
-          </Layout>
-        }
-      />
-      <Route
-        path="/write-to/:askId"
-        element={
-          <Layout>
-            <CreateLetter />
+            <Me />
           </Layout>
         }
       />
 
+      {/* /u/:username — 받는 사람 고정 편지 작성 페이지 (수신자용 Layout) */}
+      <Route
+        path="/u/:username"
+        element={
+          <RecipientLayout>
+            <UserWrite />
+          </RecipientLayout>
+        }
+      />
+
+      {/* 편지 상세 — receiver 본인 또는 isPublic */}
+      <Route
+        path="/letter/:id"
+        element={
+          <RecipientLayout>
+            <LetterDetail />
+          </RecipientLayout>
+        }
+      />
+
+      {/* 옛 라우트 호환 — 새 흐름으로 redirect */}
+      <Route path="/setup" element={<Navigate to="/onboarding" replace />} />
+      <Route path="/inbox" element={<Navigate to="/me" replace />} />
+      <Route path="/archive" element={<Navigate to="/me" replace />} />
+      <Route path="/feed" element={<Navigate to="/me" replace />} />
+      {/* 옛 ask/create/complete/view 흐름 제거. 일부 redirect 만. */}
+      <Route path="/ask" element={<Navigate to="/me" replace />} />
+      <Route path="/create/letter" element={<Navigate to="/write" replace />} />
+      <Route path="/create/diary" element={<Navigate to="/write" replace />} />
+
+      {/* 그 외 — 404 */}
       <Route
         path="*"
         element={
           <Layout>
-            <div className="pt-20 text-center text-ink-500 text-sm">
-              존재하지 않는 페이지입니다.
+            <div className="pt-20 text-center text-[13px]" style={{ color: '#86705E' }}>
+              앗, 이 편지지는 찾을 수 없어요.
             </div>
           </Layout>
         }

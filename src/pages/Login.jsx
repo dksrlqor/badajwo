@@ -1,29 +1,57 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
+import { useAuth, hasGoogleClientId } from '../context/AuthContext'
+import { OrnamentLine } from '../components/VintageMail'
+import Toast from '../components/Toast'
 
+// 받아줘 — Google 로그인.
+// 로그인 후 username 있으면 /me, 없으면 /onboarding 이동.
 export default function Login() {
   const navigate = useNavigate()
-  const { login } = useAuth()
-  const [loading, setLoading] = useState(null)
+  const location = useLocation()
+  const { signInWithGoogleCredential, signInMock } = useAuth()
   const [error, setError] = useState('')
+  const [toast, setToast] = useState({ message: '', show: false })
+  const [devKey, setDevKey] = useState('')
+  const hasClient = hasGoogleClientId()
 
-  const handle = async (provider) => {
-    if (loading) return
-    setLoading(provider)
-    setError('')
-    try {
-      const result = await login(provider)
-      if (result.status === 'pending-setup') {
-        navigate('/setup', { replace: true })
-      } else {
-        navigate('/me', { replace: true })
-      }
-    } catch (e) {
-      setError('로그인에 실패했어요. 잠시 후 다시 시도해주세요.')
-      setLoading(null)
+  const next = new URLSearchParams(location.search).get('next') || ''
+
+  const afterLogin = (user) => {
+    if (next) navigate(next)
+    else if (!user.username) navigate('/onboarding')
+    else navigate('/me')
+  }
+
+  const onCredential = (credentialResponse) => {
+    if (!credentialResponse?.credential) {
+      setError('구글 로그인 응답이 비어있어요.')
+      return
     }
+    const res = signInWithGoogleCredential(credentialResponse.credential)
+    if (!res.ok) {
+      setError(res.reason || '로그인에 실패했어요.')
+      return
+    }
+    afterLogin(res.user)
+  }
+
+  const onMockLogin = () => {
+    const k = devKey.trim().toLowerCase()
+    if (!k) {
+      setError('테스트용 키를 적어주세요.')
+      return
+    }
+    const res = signInMock(k, k)
+    if (!res.ok) {
+      setError(res.reason || '테스트 로그인에 실패했어요.')
+      return
+    }
+    setToast({ message: '테스트 계정으로 들어왔어요.', show: true })
+    setTimeout(() => setToast({ message: '', show: false }), 1500)
+    afterLogin(res.user)
   }
 
   return (
@@ -32,130 +60,165 @@ export default function Login() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.4 }}
-      className="flex flex-col min-h-[85vh]"
+      className="pt-6"
     >
-      <div className="flex items-center mb-2">
+      <div className="flex items-center mb-6">
         <button
           onClick={() => navigate('/')}
-          className="text-ink-700 text-sm px-2 py-1 -ml-2 hover:text-ink-900"
+          className="text-sm px-2 py-1 -ml-2"
+          style={{
+            color: '#5A4538',
+            textDecoration: 'underline dashed rgba(92,62,40,0.32)',
+            textUnderlineOffset: 4
+          }}
         >
           ← 뒤로
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center text-center pt-4 pb-10">
-        <motion.div
-          animate={{ y: [0, -4, 0] }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          className="text-6xl mb-6"
+      <div className="text-center mb-6">
+        <h1
+          className="text-[22px] font-bold"
+          style={{
+            color: '#3D2E22',
+            fontFamily: "'Apple SD Gothic Neo', Georgia, serif"
+          }}
         >
-          💌
-        </motion.div>
-        <h1 className="text-xl font-bold text-ink-900 mb-2">받아줘에 로그인</h1>
-        <p className="text-sm text-ink-500 leading-relaxed mb-10 px-4">
-          내 받은 편지를 어디서든 다시 볼 수 있어요.
+          내 편지함을 열려면
+        </h1>
+        <div className="flex justify-center mt-2 mb-2">
+          <OrnamentLine width={120} color="#86705E" />
+        </div>
+        <p className="text-[12px] leading-relaxed" style={{ color: '#86705E' }}>
+          Google 로 한 번만 로그인하면
+          <br />내 편지함 링크가 만들어져요.
+        </p>
+      </div>
+
+      <div
+        className="paper-noise relative mx-1 mb-5"
+        style={{
+          background: '#FDF8EE',
+          padding: '28px 22px 24px',
+          borderRadius: '8px 6px 10px 7px',
+          boxShadow:
+            '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 5px rgba(92,62,40,0.10), 0 14px 32px rgba(92,62,40,0.12)'
+        }}
+      >
+        <div
+          aria-hidden
+          className="masking-tape tape-blue"
+          style={{
+            width: 88,
+            height: 18,
+            top: -9,
+            left: '50%',
+            transform: 'translateX(-50%) rotate(-2deg)'
+          }}
+        />
+
+        <p className="text-[12px] text-center leading-relaxed mb-5" style={{ color: '#5A4538' }}>
+          편지를 쓰는 것은 로그인 없이도 할 수 있어요.
           <br />
-          편지를 그냥 만들고 보내는 건 로그인 없이도 가능해요.
+          <span style={{ color: '#86705E' }}>로그인은 내 편지함을 만들 때만 필요해요.</span>
         </p>
 
-        <div className="w-full space-y-3">
-          <ProviderButton
-            provider="google"
-            onClick={() => handle('google')}
-            loading={loading === 'google'}
-            disabled={!!loading && loading !== 'google'}
-          />
-          <ProviderButton
-            provider="apple"
-            onClick={() => handle('apple')}
-            loading={loading === 'apple'}
-            disabled={!!loading && loading !== 'apple'}
-          />
-        </div>
-
-        {error && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-xs text-accent-pinkDeep mt-4"
+        {hasClient ? (
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={onCredential}
+              onError={() => setError('구글 로그인이 취소되었거나 실패했어요.')}
+              text="signin_with"
+              shape="pill"
+              size="large"
+              theme="outline"
+              locale="ko"
+            />
+          </div>
+        ) : (
+          <div
+            className="text-[12px] leading-relaxed p-3 rounded"
+            style={{
+              background: 'rgba(255, 252, 245, 0.7)',
+              border: '1px dashed rgba(92, 62, 40, 0.25)',
+              color: '#86705E'
+            }}
           >
-            {error}
-          </motion.div>
+            <b style={{ color: '#3D2E22' }}>Google OAuth client_id 미설정</b>
+            <br />
+            <code className="text-[11px]">.env.local</code> 에{' '}
+            <code className="text-[11px]">VITE_GOOGLE_CLIENT_ID</code> 를 채워주세요.
+            <br />
+            자세한 방법은 <code className="text-[11px]">.env.example</code> 참고.
+          </div>
         )}
 
-        <button
-          onClick={() => navigate('/')}
-          className="mt-10 text-xs text-ink-500 underline underline-offset-4 hover:text-ink-700"
-        >
-          로그인 없이 편지 만들기
-        </button>
+        {error && (
+          <div
+            className="text-[12px] text-center mt-4"
+            style={{ color: '#C7443E' }}
+          >
+            {error}
+          </div>
+        )}
       </div>
-    </motion.div>
-  )
-}
 
-function ProviderButton({ provider, onClick, loading, disabled }) {
-  if (provider === 'google') {
-    return (
-      <motion.button
-        whileTap={disabled ? undefined : { scale: 0.96 }}
-        whileHover={disabled ? undefined : { y: -1 }}
-        onClick={onClick}
-        disabled={loading || disabled}
-        className="w-full flex items-center justify-center gap-3 bg-white border border-cream-300 rounded-2xl py-4 text-base font-medium text-ink-900 shadow-soft disabled:opacity-60 disabled:cursor-not-allowed"
+      <details
+        className="mx-1 text-[11px] mb-5"
+        style={{ color: '#86705E' }}
       >
-        <GoogleIcon />
-        <span>{loading ? '로그인 중...' : 'Google로 계속하기'}</span>
-      </motion.button>
-    )
-  }
-  return (
-    <motion.button
-      whileTap={disabled ? undefined : { scale: 0.96 }}
-      whileHover={disabled ? undefined : { y: -1 }}
-      onClick={onClick}
-      disabled={loading || disabled}
-      className="w-full flex items-center justify-center gap-3 bg-ink-900 rounded-2xl py-4 text-base font-medium text-white shadow-soft disabled:opacity-60 disabled:cursor-not-allowed"
-    >
-      <AppleIcon />
-      <span>{loading ? '로그인 중...' : 'Apple로 계속하기'}</span>
-    </motion.button>
-  )
-}
+        <summary className="cursor-pointer select-none">
+          OAuth client_id 가 아직 없을 때 → 테스트 모드로 들어가기
+        </summary>
+        <div
+          className="mt-3 p-3 rounded"
+          style={{
+            background: 'rgba(255, 252, 245, 0.6)',
+            border: '1px dashed rgba(92, 62, 40, 0.18)'
+          }}
+        >
+          <p className="mb-2">
+            아래에 임의의 키 (예: <b>gibaek</b>) 를 적고 로그인하면 그 키 기준으로 가짜
+            계정이 만들어져요. 로컬 개발 / 친구 미리보기 용도로만.
+          </p>
+          <div className="flex gap-2">
+            <input
+              className="paper-input flex-1"
+              value={devKey}
+              onChange={(e) => setDevKey(e.target.value)}
+              placeholder="예: gibaek"
+              maxLength={20}
+            />
+            <button
+              onClick={onMockLogin}
+              className="stationery-button"
+              style={{ padding: '8px 14px', fontSize: 12 }}
+            >
+              테스트 로그인
+            </button>
+          </div>
+        </div>
+      </details>
 
-function GoogleIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-      <path
-        fill="#FFC107"
-        d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"
-      />
-      <path
-        fill="#FF3D00"
-        d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
-      />
-      <path
-        fill="#4CAF50"
-        d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.6 2.4-7.2 2.4-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.5 39.6 16.1 44 24 44z"
-      />
-      <path
-        fill="#1976D2"
-        d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.6l6.2 5.2c-.4.3 6.6-4.8 6.6-14.8 0-1.2-.1-2.4-.4-3.5z"
-      />
-    </svg>
-  )
-}
+      <p
+        className="text-[11px] text-center leading-relaxed"
+        style={{ color: '#86705E' }}
+      >
+        로그인하면 Google 계정 식별값, 이메일, 이름, 프로필 사진을 받아 받아줘 계정을
+        만들어요.
+        <br />
+        자세한 내용은{' '}
+        <Link
+          to="/privacy"
+          className="underline"
+          style={{ color: '#5A4538', textUnderlineOffset: 3 }}
+        >
+          개인정보 처리방침
+        </Link>{' '}
+        에서 확인할 수 있어요.
+      </p>
 
-function AppleIcon() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M17.05 12.04c0-2.8 2.28-4.13 2.39-4.2-1.31-1.91-3.34-2.17-4.06-2.2-1.72-.17-3.36 1.01-4.23 1.01-.88 0-2.22-.99-3.66-.96-1.88.03-3.62 1.1-4.59 2.78-1.97 3.4-.5 8.43 1.41 11.2.93 1.36 2.04 2.88 3.49 2.83 1.42-.06 1.95-.91 3.66-.91 1.7 0 2.19.91 3.68.88 1.52-.03 2.49-1.39 3.41-2.75 1.08-1.58 1.52-3.11 1.54-3.19-.04-.02-2.95-1.13-2.94-4.49zm-2.78-8.27c.78-.94 1.3-2.25 1.16-3.55-1.12.05-2.47.74-3.27 1.68-.72.83-1.35 2.16-1.18 3.43 1.25.1 2.51-.62 3.29-1.56z" />
-    </svg>
+      <Toast message={toast.message} show={toast.show} />
+    </motion.div>
   )
 }
