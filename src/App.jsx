@@ -6,6 +6,8 @@ import CreateLetter from './pages/CreateLetter'
 import CreateDiary from './pages/CreateDiary'
 import Complete from './pages/Complete'
 import ViewPage from './pages/ViewPage'
+import AskSetup from './pages/AskSetup'
+import AskLink from './pages/AskLink'
 
 // 현재 MVP 에서는 로그인 기능을 노출하지 않는다.
 // 로그인 관련 페이지 파일은 보존하되 라우트만 빼서, 추후 백엔드 연동 시
@@ -61,6 +63,32 @@ export default function App() {
         element={
           <Layout>
             <Complete />
+          </Layout>
+        }
+      />
+
+      {/* "나한테 편지 써줘" 흐름 */}
+      <Route
+        path="/ask"
+        element={
+          <Layout>
+            <AskSetup />
+          </Layout>
+        }
+      />
+      <Route
+        path="/ask/:id"
+        element={
+          <Layout>
+            <AskLink />
+          </Layout>
+        }
+      />
+      <Route
+        path="/write-to/:askId"
+        element={
+          <Layout>
+            <CreateLetter />
           </Layout>
         }
       />

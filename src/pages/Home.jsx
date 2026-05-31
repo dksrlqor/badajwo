@@ -43,7 +43,7 @@ export default function Home() {
           transition={{ duration: 0.5, delay: 0.15 }}
           className="text-sm text-ink-700 mb-2"
         >
-          마음을 편지로 건네보세요.
+          말로 하기 어려운 마음을, 편지로 받아줘.
         </motion.p>
         <motion.p
           initial={{ opacity: 0, y: 6 }}
@@ -66,16 +66,20 @@ export default function Home() {
           >
             편지 쓰기
           </MotionButton>
+          <MotionButton variant="soft" onClick={() => navigate('/ask')}>
+            나한테 편지 써줘
+          </MotionButton>
           <MotionButton variant="soft" onClick={() => setOpenModal(true)}>
             받은 편지 열기
           </MotionButton>
-          <MotionButton
-            variant="soft"
-            onClick={() => navigate('/create/diary')}
-          >
-            다이어리 만들기
-          </MotionButton>
         </motion.div>
+
+        <button
+          onClick={() => navigate('/create/diary')}
+          className="mt-6 text-xs text-ink-500 underline underline-offset-4 hover:text-ink-700"
+        >
+          다이어리 만들기
+        </button>
 
         <motion.div
           initial={{ opacity: 0 }}

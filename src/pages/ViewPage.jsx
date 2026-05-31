@@ -235,10 +235,13 @@ function WriteMyOwnTab() {
 
 // ─── Letter view ─────────────────────────────────────────
 function LetterView({ item }) {
-  const isAnon = item.isAnonymous || item.senderMode === '익명'
-  const senderLabel = isAnon
-    ? '익명의 마음으로부터'
-    : item.senderName || '보내는 사람'
+  // 익명 토글이 사라졌으므로 senderName 만 본다.
+  // (옛 데이터 호환: 옛 letter 가 senderMode='익명' 으로 저장돼 있으면 그대로 표시)
+  const senderLabel =
+    item.senderName ||
+    (item.senderMode === '익명' || item.isAnonymous
+      ? '익명의 마음으로부터'
+      : '보내는 사람')
 
   // 호환성: content / body 양쪽 지원
   const body = item.content || item.body || ''
@@ -304,7 +307,7 @@ function LetterView({ item }) {
               {body}
             </div>
             <div className="text-xs text-right mt-8 opacity-70">
-              {isAnon ? senderLabel : `From. ${senderLabel}`}
+              From. {senderLabel}
             </div>
           </div>
           <StickerDecoration count={2} size={20} />
@@ -328,10 +331,11 @@ function DiaryView({ item }) {
   const [page, setPage] = useState(0)
   const [dir, setDir] = useState(1)
   const total = item.pages.length
-  const isAnon = item.senderMode === '익명' || item.isAnonymous
-  const senderLabel = isAnon
-    ? '익명의 마음으로부터'
-    : item.senderName || '보내는 사람'
+  const senderLabel =
+    item.senderName ||
+    (item.senderMode === '익명' || item.isAnonymous
+      ? '익명의 마음으로부터'
+      : '보내는 사람')
 
   const go = (delta) => {
     const target = page + delta
@@ -351,7 +355,7 @@ function DiaryView({ item }) {
           <p className="text-sm text-accent-pinkDeep mt-1">{item.subtitle}</p>
         )}
         <div className="text-xs text-ink-500 text-right mt-3">
-          {isAnon ? senderLabel : `From. ${senderLabel}`}
+          From. {senderLabel}
         </div>
       </SoftCard>
 

@@ -9,6 +9,9 @@ const ITEMS_KEY = 'badajwo:items'
 const USERS_KEY = 'badajwo:users'
 const SESSION_KEY = 'badajwo:session'
 const PENDING_KEY = 'badajwo:pendingAuth'
+// "나한테 편지 써줘" — 사용자가 자기 이름으로 만든 편지 요청 링크 저장소.
+// AskRequest = { id, receiverName, createdAt }
+const ASKS_KEY = 'badajwo:askRequests'
 
 function readJSON(key, fallback) {
   try {
@@ -144,4 +147,18 @@ export function clearPendingAuth() {
 export function loadCurrentUser() {
   const id = getSession()
   return id ? getUser(id) : null
+}
+
+// ─── ask requests ("나한테 편지 써줘") ────────────────────
+export function saveAskRequest(req) {
+  if (!req || !req.id) return false
+  const map = readJSON(ASKS_KEY, {})
+  map[req.id] = req
+  return writeJSON(ASKS_KEY, map)
+}
+
+export function getAskRequest(id) {
+  if (!id) return null
+  const map = readJSON(ASKS_KEY, {})
+  return map[id] || null
 }

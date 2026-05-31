@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import MotionButton from '../components/MotionButton'
 import SoftCard from '../components/SoftCard'
 import StepIndicator from '../components/StepIndicator'
@@ -12,7 +12,7 @@ import PhotoAdjustmentModal from '../components/PhotoAdjustmentModal'
 import PostItNote from '../components/PostItNote'
 import RecordPlayer from '../components/RecordPlayer'
 import StickerDecoration from '../components/StickerDecoration'
-import { saveItem } from '../utils/storage'
+import { saveItem, getAskRequest } from '../utils/storage'
 import { createId } from '../utils/createId'
 import { loadAndDownscale } from '../utils/imageFile'
 import { useAuth } from '../context/AuthContext'
@@ -22,8 +22,7 @@ const BODY_MAX = 1600
 const BODY_SOFT = 1400
 const POSTIT_MAX = 80
 const CAPTION_MAX = 30
-
-const SENDER_MODES = ['닉네임', '익명']
+const NAME_MAX = 12
 
 const stepVariants = {
   enter: { opacity: 0, y: 12 },
@@ -43,12 +42,16 @@ const emptyPhoto = () => ({
 export default function CreateLetter() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  // "나한테 편지 써줘" 흐름인 경우 askId 로 receiverName 자동 채움.
+  const { askId } = useParams()
+  const askRequest = askId ? getAskRequest(askId) : null
+  const lockReceiver = !!askRequest
+
   const [step, setStep] = useState(1)
   const [error, setError] = useState('')
-  const [data, setData] = useState({
+  const [data, setData] = useState(() => ({
     // step 1
-    receiverName: '',
-    senderMode: '닉네임',
+    receiverName: askRequest?.receiverName || '',
     senderName: '',
     // step 2
     title: '',
@@ -64,7 +67,7 @@ export default function CreateLetter() {
     passwordEnabled: false,
     password: '',
     passwordHint: ''
-  })
+  }))
   const [showAdjust, setShowAdjust] = useState(false)
   const [processingPhoto, setProcessingPhoto] = useState(false)
   const fileInputRef = useRef(null)
@@ -80,8 +83,7 @@ export default function CreateLetter() {
   const validateStep = () => {
     if (step === 1) {
       if (!data.receiverName.trim()) return '받는 사람 이름을 입력해주세요.'
-      if (data.senderMode !== '익명' && !data.senderName.trim())
-        return '작성자 이름을 입력해주세요.'
+      if (!data.senderName.trim()) return '작성자 이름을 입력해주세요.'
     }
     if (step === 2) {
       if (!data.title.trim()) return '편지 제목을 입력해주세요.'
@@ -130,10 +132,14 @@ export default function CreateLetter() {
       id,
       type: 'letter',
       receiverName: data.receiverName.trim(),
-      senderMode: data.senderMode,
-      senderName: data.senderMode === '익명' ? '' : data.senderName.trim(),
+      // 작성자 이름. "익명" / "비밀" / "ㅇㅇ" 같은 텍스트도 그대로 받는다.
+      senderName: data.senderName.trim(),
+      // 호환성을 위해 옛 필드 유지 (옛 letter 데이터를 깨지 않기 위함)
+      senderMode: 'named',
+      isAnonymous: false,
       senderUserId: user?.id || null,
-      isAnonymous: data.senderMode === '익명',
+      // askId 있을 때만 저장 (어떤 요청에서 왔는지 추적)
+      fromAskId: askId || null,
       title: data.title.trim(),
       subtitle: data.subtitle.trim(),
       // 본문: 새 이름(content) 과 기존 이름(body) 둘 다 저장 → 이전 ViewPage 호환
@@ -243,6 +249,7 @@ export default function CreateLetter() {
               <Step1
                 data={data}
                 update={update}
+                lockReceiver={lockReceiver}
               />
             )}
             {step === 2 && (
@@ -324,12 +331,12 @@ export default function CreateLetter() {
 }
 
 // ─── Step 1 ──────────────────────────────────────────────
-function Step1({ data, update }) {
+function Step1({ data, update, lockReceiver }) {
   return (
     <div>
       <h2 className="text-lg font-bold text-ink-900 mb-1">받는 사람</h2>
       <p className="text-xs text-ink-500 mb-5">
-        누구에게, 어떤 이름으로 보낼지 정해주세요.
+        누구에게 어떤 이름으로 보낼지 정해주세요.
       </p>
       <div className="space-y-4">
         <div>
@@ -337,53 +344,40 @@ function Step1({ data, update }) {
           <input
             className="field"
             value={data.receiverName}
-            onChange={(e) => update('receiverName', e.target.value)}
+            onChange={
+              lockReceiver
+                ? undefined
+                : (e) => update('receiverName', e.target.value)
+            }
+            readOnly={lockReceiver}
             placeholder="예) 지수"
-            maxLength={20}
+            maxLength={NAME_MAX}
+            style={
+              lockReceiver
+                ? { background: 'rgba(255, 252, 245, 0.85)', cursor: 'not-allowed' }
+                : undefined
+            }
           />
+          {lockReceiver && (
+            <p className="text-xs text-accent-lavenderDeep mt-2 leading-relaxed">
+              이 편지는 <span className="font-semibold">{data.receiverName}</span> 가
+              남긴 받기 링크예요. 받는 사람은 그대로 둘게요.
+            </p>
+          )}
         </div>
         <div>
-          <label className="label">작성자 표시 방식</label>
-          <div className="grid grid-cols-2 gap-2">
-            {SENDER_MODES.map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => update('senderMode', mode)}
-                className={`py-3 rounded-2xl text-sm font-medium transition-colors ${
-                  data.senderMode === mode
-                    ? 'bg-accent-pinkDeep text-white'
-                    : 'bg-cream-100 text-ink-700 hover:bg-cream-200'
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
+          <label className="label">작성자 이름</label>
+          <input
+            className="field"
+            value={data.senderName}
+            onChange={(e) => update('senderName', e.target.value)}
+            placeholder="이름이나 별명 (예: 기백, ㅇㅇ, 익명)"
+            maxLength={NAME_MAX}
+          />
           <p className="text-xs text-ink-500 mt-2 leading-relaxed">
-            익명으로 보내면 받는 사람에게는 "익명의 마음으로부터" 로 보여요.
+            이름 대신 "익명" 이나 "비밀" 처럼 그대로 적어도 괜찮아요.
           </p>
         </div>
-        <AnimatePresence initial={false}>
-          {data.senderMode !== '익명' && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <label className="label">닉네임</label>
-              <input
-                className="field"
-                value={data.senderName}
-                onChange={(e) => update('senderName', e.target.value)}
-                placeholder="닉네임을 입력해주세요"
-                maxLength={20}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   )
@@ -687,10 +681,7 @@ function Step4({ data, update }) {
 
 // ─── Step 5: Preview ─────────────────────────────────────
 function Step5({ data }) {
-  const isAnon = data.senderMode === '익명'
-  const senderLabel = isAnon
-    ? '익명의 마음으로부터'
-    : data.senderName || '보내는 사람'
+  const senderLabel = data.senderName.trim() || '보내는 사람'
   const hasPhoto = !!data.photo.src
   const hasMusic = !!data.musicUrl
 
@@ -752,7 +743,7 @@ function Step5({ data }) {
                 {data.body || '여기에 편지 내용이 표시돼요.'}
               </div>
               <div className="text-xs text-right mt-6 opacity-70">
-                {isAnon ? senderLabel : `From. ${senderLabel}`}
+                From. {senderLabel}
               </div>
             </div>
             <StickerDecoration count={2} size={20} />

@@ -14,7 +14,7 @@ const stepVariants = {
   exit: { opacity: 0, y: -12 }
 }
 
-const SENDER_MODES = ['닉네임', '익명']
+const NAME_MAX = 12
 
 const newPage = () => ({ date: '', title: '', body: '', imageUrl: '' })
 
@@ -26,7 +26,6 @@ export default function CreateDiary() {
   const [data, setData] = useState({
     title: '',
     receiverName: '',
-    senderMode: '닉네임',
     senderName: '',
     subtitle: '',
     pages: [newPage()]
@@ -61,8 +60,7 @@ export default function CreateDiary() {
     if (step === 1) {
       if (!data.title.trim()) return '다이어리 제목을 입력해주세요.'
       if (!data.receiverName.trim()) return '받는 사람 이름을 입력해주세요.'
-      if (data.senderMode !== '익명' && !data.senderName.trim())
-        return '작성자 이름을 입력해주세요.'
+      if (!data.senderName.trim()) return '작성자 이름을 입력해주세요.'
     }
     if (step === 2) {
       if (data.pages.length === 0) return '추억 페이지가 한 개 이상 필요해요.'
@@ -100,11 +98,11 @@ export default function CreateDiary() {
       id,
       type: 'diary',
       receiverName: data.receiverName.trim(),
-      senderMode: data.senderMode,
-      senderName: data.senderMode === '익명' ? '' : data.senderName.trim(),
+      senderName: data.senderName.trim(),
+      senderMode: 'named',
+      isAnonymous: false,
       // 로그인 사용자가 작성한 경우만 senderUserId 저장.
       senderUserId: user?.id || null,
-      isAnonymous: data.senderMode === '익명',
       title: data.title.trim(),
       subtitle: data.subtitle.trim(),
       pages: data.pages.map((p) => ({
@@ -183,46 +181,18 @@ export default function CreateDiary() {
                     />
                   </div>
                   <div>
-                    <label className="label">작성자 표시 방식</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {SENDER_MODES.map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => update('senderMode', mode)}
-                          className={`py-3 rounded-2xl text-sm font-medium transition-colors ${
-                            data.senderMode === mode
-                              ? 'bg-accent-pinkDeep text-white'
-                              : 'bg-cream-100 text-ink-700 hover:bg-cream-200'
-                          }`}
-                        >
-                          {mode}
-                        </button>
-                      ))}
-                    </div>
+                    <label className="label">작성자 이름</label>
+                    <input
+                      className="field"
+                      value={data.senderName}
+                      onChange={(e) => update('senderName', e.target.value)}
+                      placeholder="이름이나 별명 (예: 기백, ㅇㅇ, 익명)"
+                      maxLength={NAME_MAX}
+                    />
                     <p className="text-xs text-ink-500 mt-2 leading-relaxed">
-                      익명으로 보내면 받는 사람에게는 "익명의 마음으로부터" 로 보여요.
+                      "익명" 처럼 그대로 적어도 괜찮아요.
                     </p>
                   </div>
-                  <AnimatePresence initial={false}>
-                    {data.senderMode !== '익명' && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <label className="label">닉네임</label>
-                        <input
-                          className="field"
-                          value={data.senderName}
-                          onChange={(e) => update('senderName', e.target.value)}
-                          placeholder="닉네임을 입력해주세요"
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                   <div>
                     <label className="label">대표 문구</label>
                     <input
@@ -333,9 +303,7 @@ export default function CreateDiary() {
                     추억 페이지 {data.pages.length}개
                   </div>
                   <div className="text-xs text-ink-500 mt-3 text-right">
-                    {data.senderMode === '익명'
-                      ? '익명의 마음으로부터'
-                      : `From. ${data.senderName || '보내는 사람'}`}
+                    From. {data.senderName.trim() || '보내는 사람'}
                   </div>
                 </div>
               </div>
