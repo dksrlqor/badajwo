@@ -293,15 +293,7 @@ export default function Privacy() {
           </p>
         </Section>
 
-        <Section title="12. 문의">
-          <ul className="list-disc pl-5">
-            <li>서비스명: 받아줘</li>
-            <li>문의 이메일: hpq7khgyqd@privaterelay.appleid.com</li>
-            <li>운영자: 받아줘 운영자</li>
-          </ul>
-        </Section>
-
-        <Section title="13. 처리방침 변경">
+        <Section title="12. 처리방침 변경">
           <p>
             이 개인정보 처리방침은 서비스 운영 방식, 법령, 기능 변경에 따라 수정될 수
             있습니다. 처리방침이 변경되는 경우 서비스 내 공지 또는 개인정보 처리방침
