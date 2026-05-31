@@ -193,23 +193,43 @@ export default function ViewPage() {
             <DiaryView item={item} />
           )}
 
-          <div className="mt-6">
-            {isPreview ? (
+          {isPreview ? (
+            <div className="mt-6">
               <MotionButton
                 variant="ghost"
                 onClick={() => navigate(`/complete/${id}`)}
               >
                 ← 링크 복사로 돌아가기
               </MotionButton>
-            ) : (
-              <MotionButton variant="ghost" onClick={() => navigate('/')}>
-                나도 만들어보기
-              </MotionButton>
-            )}
-          </div>
+            </div>
+          ) : (
+            <WriteMyOwnTab />
+          )}
         </motion.div>
       )}
+
+      {phase === 'invite' && !isPreview && <WriteMyOwnTab />}
+      {phase === 'password' && !isPreview && <WriteMyOwnTab />}
     </motion.div>
+  )
+}
+
+// 수신 화면 하단의 작고 조용한 "나도 편지쓰기" 종이 탭.
+// 일반 CTA 처럼 크면 안 됨 — 편지보다 눈에 띄지 않게.
+function WriteMyOwnTab() {
+  const navigate = useNavigate()
+  return (
+    <div className="mt-10 flex justify-center">
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        className="paper-tab"
+        aria-label="나도 편지쓰기"
+      >
+        <span className="text-[13px]">✍️</span>
+        <span>나도 편지쓰기</span>
+      </button>
+    </div>
   )
 }
 
