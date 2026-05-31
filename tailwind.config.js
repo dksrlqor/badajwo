@@ -45,7 +45,14 @@ export default {
           liner: '#F4E5CC',
           fold:  '#D2B898'
         },
-        seal: { wax: '#B8755D' }
+        seal: { wax: '#B8755D' },
+        // 항공우편 (airmail) 색 — 빈티지 톤, 너무 채도 높지 않게
+        airmail: {
+          red:  '#C7443E', // vintage red
+          blue: '#4E6B8A', // dusty blue
+          navy: '#2C3E5A', // muted navy ink
+          ink:  '#3D2E22'  // 본문 잉크 (ink-900 과 동일)
+        }
       },
       fontFamily: {
         sans: [

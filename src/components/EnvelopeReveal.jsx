@@ -316,6 +316,78 @@ function EnvelopeStage({ opening, reduceMotion }) {
           transition={{ duration: 0.25, delay: opening ? 0.05 : 0 }}
         />
       </motion.div>
+
+      {/* 빈티지 우표 — pocket 위쪽, flap 영역 밖이라 봉투 닫힘/열림 모두 보임 */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 'calc(var(--peek-up) + var(--env-h) * 0.55)',
+          right: 'calc(var(--env-w) * 0.06)',
+          width: 32,
+          height: 40,
+          padding: 3,
+          background: `${ENV_NOISE_BG}, ${C.envLiner}`,
+          backgroundBlendMode: 'multiply, normal',
+          border: '1px dashed rgba(255,255,255,0.85)',
+          outline: '1px solid rgba(92, 62, 40, 0.18)',
+          boxShadow: '0 1px 3px rgba(92,62,40,0.20)',
+          transform: 'rotate(-4deg)',
+          zIndex: 6
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            height: '100%',
+            background:
+              'linear-gradient(160deg, #C7443E 0%, #A23B36 55%, #2C3E5A 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#FDF8EE',
+            fontSize: 14,
+            lineHeight: 1
+          }}
+        >
+          ✉
+        </div>
+      </div>
+
+      {/* 소인 (postmark) — 우표 왼쪽, 둥근 점선 도장 */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: 'calc(var(--peek-up) + var(--env-h) * 0.52)',
+          right: 'calc(var(--env-w) * 0.20)',
+          width: 42,
+          height: 42,
+          border: '1.5px dashed rgba(78, 107, 138, 0.55)',
+          borderRadius: '50%',
+          color: 'rgba(78, 107, 138, 0.65)',
+          fontSize: 8,
+          fontFamily: 'Georgia, "Times New Roman", serif',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: 'rotate(-14deg)',
+          letterSpacing: '0.06em',
+          zIndex: 6
+        }}
+      >
+        <div style={{ fontSize: 8, fontWeight: 600 }}>BADAJWO</div>
+        <div
+          style={{
+            width: '70%',
+            height: 1,
+            background: 'rgba(78, 107, 138, 0.5)',
+            margin: '2px 0'
+          }}
+        />
+        <div style={{ fontSize: 7 }}>POSTED</div>
+      </div>
     </motion.div>
   )
 }
