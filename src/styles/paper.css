@@ -364,7 +364,7 @@
   transform: rotate(-1deg) translateY(1px);
 }
 
-/* ─── 식물 데코 — 이모지 기반 압화 ────────────────────── */
+/* ─── 식물 데코 — SVG 직접 그린 압화/고사리 ─────────────── */
 .botanic-deco {
   position: fixed;
   inset: 0;
@@ -379,4 +379,59 @@
     saturate(0.7)
     brightness(0.95);
   user-select: none;
+}
+
+/* ─── 스크랩북 페이지 (데스크 위 종이 한 장) ────────────── */
+.scrapbook-page {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,0.18) 0%, transparent 36%),
+    radial-gradient(circle at 78% 82%, rgba(180,135,95,0.06) 0%, transparent 40%),
+    linear-gradient(180deg, #FDF8EE 0%, #FAF1E1 55%, #F6E9D0 100%);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.55) inset,
+    0 -1px 0 rgba(92,62,40,0.05) inset,
+    0 2px 6px rgba(92,62,40,0.08),
+    0 18px 40px rgba(92,62,40,0.12);
+  border-radius: 10px 6px 12px 8px; /* 비대칭 종이 자른 모서리 */
+}
+.scrapbook-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.28  0 0 0 0 0.20  0 0 0 0 0.13  0 0 0 0.055 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.8;
+}
+.scrapbook-page::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 36px rgba(92, 62, 40, 0.08);
+}
+.scrapbook-page > * { position: relative; z-index: 1; }
+
+/* ─── 빈티지 spots — 오래된 종이의 갈색 얼룩 ──────────── */
+.vintage-spots {
+  position: relative;
+}
+.vintage-spots::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'><g><ellipse cx='80' cy='120' rx='3.5' ry='2.8' fill='rgba(120,80,40,0.16)'/><ellipse cx='250' cy='80' rx='2.5' ry='1.8' fill='rgba(120,80,40,0.14)'/><ellipse cx='450' cy='180' rx='4' ry='3.2' fill='rgba(120,80,40,0.18)'/><ellipse cx='560' cy='90' rx='2' ry='1.5' fill='rgba(120,80,40,0.12)'/><ellipse cx='160' cy='320' rx='3' ry='2.2' fill='rgba(120,80,40,0.14)'/><ellipse cx='380' cy='420' rx='4.5' ry='3.5' fill='rgba(120,80,40,0.16)'/><ellipse cx='100' cy='510' rx='2.5' ry='1.8' fill='rgba(120,80,40,0.14)'/><ellipse cx='510' cy='540' rx='3.5' ry='2.8' fill='rgba(120,80,40,0.18)'/><ellipse cx='300' cy='560' rx='2' ry='1.5' fill='rgba(120,80,40,0.12)'/><ellipse cx='30' cy='280' rx='2' ry='1.5' fill='rgba(120,80,40,0.14)'/><ellipse cx='580' cy='340' rx='2.5' ry='1.8' fill='rgba(120,80,40,0.14)'/><ellipse cx='220' cy='200' rx='2' ry='1.5' fill='rgba(120,80,40,0.10)'/></g></svg>");
+  background-size: 600px 600px;
+  mix-blend-mode: multiply;
+  opacity: 0.95;
 }

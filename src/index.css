@@ -37,15 +37,19 @@ body::before {
   opacity: 0.7;
 }
 
-/* 가장자리 약한 vignette (종이 가장자리가 살짝 그늘진 느낌) */
+/* 가장자리 vignette + 오래된 종이 갈색 얼룩 */
 body::after {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  background:
-    radial-gradient(ellipse 90% 70% at 50% 50%, transparent 0%, rgba(120, 80, 40, 0.10) 100%);
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800'><g><ellipse cx='80' cy='140' rx='4' ry='3' fill='rgba(120,80,40,0.18)'/><ellipse cx='280' cy='90' rx='2.8' ry='2' fill='rgba(120,80,40,0.14)'/><ellipse cx='520' cy='220' rx='5' ry='3.8' fill='rgba(120,80,40,0.20)'/><ellipse cx='720' cy='100' rx='2.5' ry='1.8' fill='rgba(120,80,40,0.14)'/><ellipse cx='180' cy='380' rx='3.2' ry='2.4' fill='rgba(120,80,40,0.16)'/><ellipse cx='460' cy='480' rx='5' ry='3.8' fill='rgba(120,80,40,0.18)'/><ellipse cx='120' cy='620' rx='3' ry='2.2' fill='rgba(120,80,40,0.16)'/><ellipse cx='640' cy='660' rx='4' ry='3' fill='rgba(120,80,40,0.20)'/><ellipse cx='360' cy='720' rx='2.5' ry='1.8' fill='rgba(120,80,40,0.14)'/><ellipse cx='40' cy='340' rx='2.5' ry='1.8' fill='rgba(120,80,40,0.16)'/><ellipse cx='760' cy='420' rx='3' ry='2.2' fill='rgba(120,80,40,0.16)'/><ellipse cx='260' cy='240' rx='2.5' ry='1.8' fill='rgba(120,80,40,0.12)'/></g></svg>"),
+    radial-gradient(ellipse 90% 70% at 50% 50%, transparent 0%, rgba(120, 80, 40, 0.12) 100%);
+  background-size: 800px 800px, auto;
+  background-repeat: repeat, no-repeat;
+  mix-blend-mode: multiply;
 }
 
 #root {

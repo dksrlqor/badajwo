@@ -53,6 +53,38 @@ export default function Home() {
               transform: 'translateX(-50%) rotate(-6deg)'
             }}
           />
+          {/* 종이 클립 — 좌상단에 살짝 걸쳐진 듯한 SVG */}
+          <svg
+            aria-hidden
+            width="28"
+            height="42"
+            viewBox="0 0 28 42"
+            style={{
+              position: 'absolute',
+              top: -14,
+              left: -8,
+              transform: 'rotate(-22deg)',
+              filter:
+                'drop-shadow(0 2px 4px rgba(92, 62, 40, 0.30))'
+            }}
+          >
+            <path
+              d="M 9 4 L 9 30 Q 9 36 14 36 Q 19 36 19 30 L 19 10 Q 19 6 15 6 Q 11 6 11 10 L 11 28"
+              fill="none"
+              stroke="#9CA3AF"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M 9 4 L 9 30 Q 9 36 14 36 Q 19 36 19 30 L 19 10"
+              fill="none"
+              stroke="#D6DADE"
+              strokeWidth="0.8"
+              strokeLinecap="round"
+              opacity="0.9"
+            />
+          </svg>
           <h1
             className="text-[34px] font-bold tracking-tight"
             style={{
