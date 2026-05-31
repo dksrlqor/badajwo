@@ -6,13 +6,13 @@ import PaperScraps from './PaperScraps'
 export default function RecipientLayout({ children }) {
   return (
     <>
-      <PaperScraps variant="minimal" />
       <BotanicDecor />
       <div className="min-h-full w-full flex justify-center">
         <div
           className="scrapbook-page relative w-full max-w-[480px] min-h-screen px-5 pt-8 pb-16 sm:pt-12 sm:my-6"
           style={{ borderRadius: '10px 6px 12px 8px' }}
         >
+          <PaperScraps variant="minimal" />
           {children}
         </div>
       </div>

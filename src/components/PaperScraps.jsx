@@ -1,6 +1,6 @@
 // 받아줘 — scrapbook 분위기를 만드는 콜라주 레이어.
 // 책 페이지 조각, 신문 조각, 티켓 스텁, 우표, 폴라로이드 모서리가 마스킹테이프로 종이 위에 살짝 붙은 듯한 콜라주.
-// pointer-events: none. Layout 최상위에서 fixed 로 렌더되어 모든 페이지에 자동 적용.
+// pointer-events: none. 부모 scrapbook-page 안쪽에 absolute 로 깔려 모서리에 살짝 보임.
 
 // ── 책장 조각 (텍스트 흉내 가는 줄) ─────────────────────────
 function BookScrap({
@@ -76,7 +76,7 @@ function BookScrap({
   )
 }
 
-// ── 신문 조각 — 더 작은 텍스트 + 헤드라인 굵은 한 줄 ─────────
+// ── 신문 조각 ───────────────────────────────────────────────
 function NewspaperScrap({ width = 70, height = 50, rotation = 5, style = {} }) {
   return (
     <div
@@ -100,11 +100,8 @@ function NewspaperScrap({ width = 70, height = 50, rotation = 5, style = {} }) {
         }}
       />
       <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} style={{ position: 'absolute', inset: 0 }}>
-        {/* 헤드라인 굵은 라인 */}
         <rect x={5} y={6} width={width - 14} height={2.5} fill="rgba(60, 40, 25, 0.55)" />
-        {/* 짧은 라인 */}
         <rect x={5} y={12} width={(width - 14) * 0.6} height={1.2} fill="rgba(60, 40, 25, 0.4)" />
-        {/* 본문 잔줄 */}
         {Array.from({ length: 6 }).map((_, i) => (
           <line
             key={i}
@@ -122,7 +119,7 @@ function NewspaperScrap({ width = 70, height = 50, rotation = 5, style = {} }) {
   )
 }
 
-// ── 티켓 스텁 — perforated 가장자리 + 작은 텍스트 ──────────────
+// ── 티켓 스텁 ──────────────────────────────────────────────
 function TicketStub({ width = 90, height = 32, rotation = -8, color = '#C7857C', style = {} }) {
   return (
     <div
@@ -145,7 +142,6 @@ function TicketStub({ width = 90, height = 32, rotation = -8, color = '#C7857C',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.55), inset 0 0 10px rgba(92,62,40,0.10)'
         }}
       />
-      {/* 좌측 색 띠 */}
       <div
         style={{
           position: 'absolute',
@@ -157,7 +153,6 @@ function TicketStub({ width = 90, height = 32, rotation = -8, color = '#C7857C',
           opacity: 0.55
         }}
       />
-      {/* 펀치 구멍 */}
       <div
         style={{
           position: 'absolute',
@@ -171,7 +166,6 @@ function TicketStub({ width = 90, height = 32, rotation = -8, color = '#C7857C',
           opacity: 0.5
         }}
       />
-      {/* perforation dashed line */}
       <div
         style={{
           position: 'absolute',
@@ -182,12 +176,7 @@ function TicketStub({ width = 90, height = 32, rotation = -8, color = '#C7857C',
           borderLeft: '1px dashed rgba(92, 62, 40, 0.45)'
         }}
       />
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        width={width}
-        height={height}
-        style={{ position: 'absolute', inset: 0 }}
-      >
+      <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} style={{ position: 'absolute', inset: 0 }}>
         {Array.from({ length: 3 }).map((_, i) => (
           <line
             key={i}
@@ -205,8 +194,8 @@ function TicketStub({ width = 90, height = 32, rotation = -8, color = '#C7857C',
   )
 }
 
-// ── 작은 우표 — 톱니 가장자리 ──────────────────────────────
-function MiniStamp({ size = 40, rotation = 4, color = '#7A98C7', icon = '✉', style = {} }) {
+// ── 작은 우표 ──────────────────────────────────────────────
+function MiniStamp({ size = 40, rotation = 4, color = '#7A98C7', icon = '✿', style = {} }) {
   const inner = size - 6
   return (
     <div
@@ -224,15 +213,7 @@ function MiniStamp({ size = 40, rotation = 4, color = '#7A98C7', icon = '✉', s
         style={{
           position: 'absolute',
           inset: 0,
-          background: '#FCF6E6',
-          // 톱니 perforation 흉내 — radial gradient 로 가장자리 점들
-          backgroundImage:
-            'radial-gradient(circle at center, transparent 62%, rgba(255,255,255,0) 62%), radial-gradient(circle at 50% 0, transparent 4%, transparent 4%)',
-          borderRadius: 2,
-          maskImage:
-            'radial-gradient(circle at 50% 0%, transparent 2.4px, #000 2.4px), radial-gradient(circle at 0% 50%, transparent 2.4px, #000 2.4px), radial-gradient(circle at 100% 50%, transparent 2.4px, #000 2.4px), radial-gradient(circle at 50% 100%, transparent 2.4px, #000 2.4px)',
-          WebkitMaskImage:
-            'radial-gradient(circle at 50% 0%, transparent 2.4px, #000 2.4px), radial-gradient(circle at 0% 50%, transparent 2.4px, #000 2.4px), radial-gradient(circle at 100% 50%, transparent 2.4px, #000 2.4px), radial-gradient(circle at 50% 100%, transparent 2.4px, #000 2.4px)',
+          background: '#F8EFD8',
           boxShadow: 'inset 0 0 0 1.5px rgba(92, 62, 40, 0.35)'
         }}
       />
@@ -242,12 +223,11 @@ function MiniStamp({ size = 40, rotation = 4, color = '#7A98C7', icon = '✉', s
           inset: 3,
           background: '#FCF6E6',
           border: `1.5px solid ${color}`,
-          borderRadius: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: inner * 0.5,
-          color: color,
+          fontSize: inner * 0.55,
+          color,
           fontFamily: 'Georgia, serif'
         }}
       >
@@ -257,7 +237,7 @@ function MiniStamp({ size = 40, rotation = 4, color = '#7A98C7', icon = '✉', s
   )
 }
 
-// ── 폴라로이드 모서리 (작게) ────────────────────────────────
+// ── 폴라로이드 모서리 ──────────────────────────────────────
 function PolaroidCorner({ rotation = -10, photoBg = '#735F46', size = 50, style = {} }) {
   return (
     <div
@@ -295,101 +275,92 @@ function PolaroidCorner({ rotation = -10, photoBg = '#735F46', size = 50, style 
   )
 }
 
+// 부모 scrapbook-page 의 안쪽에 absolute 로 깔린다.
+// .scrapbook-page > * 가 z-index:1 을 강제하므로 inline 으로 zIndex:0 명시.
 export default function PaperScraps({ variant = 'default' }) {
-  // 화면 좌우 가장자리에 흩어진 콜라주.
-  // 모바일 좁은 폭에서도 본문 가리지 않도록 가장자리 밖으로 살짝 밀어둠.
   return (
     <div
       aria-hidden
       style={{
-        position: 'fixed',
+        position: 'absolute',
         inset: 0,
         pointerEvents: 'none',
         zIndex: 0,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        borderRadius: 'inherit'
       }}
     >
-      {/* 좌상 — 책장 조각 (sage 테이프) */}
+      {/* 좌상 — 책장 조각 */}
       <BookScrap
-        width={94}
+        width={96}
         height={62}
         rotation={-11}
         tapeColor="sage"
         paper="#EDE0BD"
         lines={5}
-        style={{ top: 200, left: -34 }}
+        style={{ top: 16, left: -28 }}
       />
-      {/* 좌상 옆 — 작은 신문 조각 */}
-      <NewspaperScrap width={56} height={42} rotation={-18} style={{ top: 320, left: -18 }} />
+      {/* 우상 — 신문 조각 + 우표 */}
+      <NewspaperScrap width={70} height={50} rotation={9} style={{ top: 12, right: -24 }} />
+      <MiniStamp
+        size={36}
+        rotation={-6}
+        color="#A6483A"
+        icon="✿"
+        style={{ top: 70, right: -10 }}
+      />
 
-      {/* 우상 — 책장 조각 (orange 테이프) */}
+      {/* 좌중간 — 작은 책장 조각 */}
       <BookScrap
-        width={80}
-        height={54}
+        width={68}
+        height={44}
+        rotation={-14}
+        tapeColor="rust"
+        paper="#E8D8B0"
+        lines={4}
+        tape={false}
+        style={{ top: '52%', left: -34 }}
+      />
+
+      {/* 우중간 — 티켓 스텁 */}
+      {variant !== 'minimal' && (
+        <TicketStub
+          width={88}
+          height={28}
+          rotation={12}
+          color="#A6694F"
+          style={{ top: '46%', right: -38 }}
+        />
+      )}
+
+      {/* 좌하 — 책장 조각 */}
+      <BookScrap
+        width={84}
+        height={56}
         rotation={9}
         tapeColor="orange"
         paper="#F3E6C7"
         lines={4}
-        style={{ top: 270, right: -26 }}
-      />
-      {/* 우상 옆 — 작은 우표 */}
-      <MiniStamp
-        size={36}
-        rotation={-8}
-        color="#A6483A"
-        icon="✿"
-        style={{ top: 360, right: 8 }}
+        style={{ bottom: 20, left: -22 }}
       />
 
-      {/* 좌하 — 티켓 스텁 */}
-      <TicketStub
-        width={94}
-        height={30}
-        rotation={-14}
-        color="#A6694F"
-        style={{ bottom: 280, left: -32 }}
-      />
-      {/* 좌하 — 작은 책장 조각 (rust 테이프) */}
-      <BookScrap
-        width={66}
-        height={44}
-        rotation={-7}
-        tapeColor="rust"
-        paper="#E8D8B0"
-        lines={4}
-        style={{ bottom: 200, left: -20 }}
-      />
-
-      {/* 우하 — 책장 조각 (blue 테이프) */}
-      <BookScrap
-        width={88}
-        height={60}
-        rotation={12}
-        tapeColor="blue"
-        paper="#EFE2C0"
-        lines={5}
-        style={{ bottom: 210, right: -28 }}
-      />
-      {/* 우하 옆 — 폴라로이드 모서리 */}
+      {/* 우하 — 폴라로이드 모서리 + 우표 */}
       <PolaroidCorner
         rotation={14}
         photoBg="#7D9270"
-        size={44}
-        style={{ bottom: 320, right: 6 }}
+        size={48}
+        style={{ bottom: 90, right: -16 }}
       />
-      {/* 우하 — 신문 조각 */}
-      <NewspaperScrap width={58} height={44} rotation={16} style={{ bottom: 130, right: -16 }} />
-
-      {/* 중하 — 작은 우표 (변형용 hidden 가능) */}
-      {variant !== 'minimal' && (
-        <MiniStamp
-          size={32}
-          rotation={6}
-          color="#4E6B8A"
-          icon="✈"
-          style={{ bottom: 92, left: 18 }}
-        />
-      )}
+      <BookScrap
+        width={78}
+        height={52}
+        rotation={-8}
+        tapeColor="blue"
+        paper="#EFE2C0"
+        lines={4}
+        tape={false}
+        style={{ bottom: 16, right: -28 }}
+      />
     </div>
   )
 }

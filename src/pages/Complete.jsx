@@ -4,6 +4,28 @@ import { useNavigate, useParams } from 'react-router-dom'
 import MotionButton from '../components/MotionButton'
 import Toast from '../components/Toast'
 import { AirmailBorder, PaperStamp, Postmark, OrnamentLine } from '../components/VintageMail'
+import { getItem } from '../utils/storage'
+import { buildStoryImage, shareToInstagramStory } from '../utils/storyImage'
+
+function InstagramGlyph({ size = 18, color = '#3D2E22' }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill={color} stroke="none" />
+    </svg>
+  )
+}
 
 // 편지 링크가 만들어진 직후 — 봉투에 담긴 편지가 책상 위에 놓인 화면.
 // airmail 봉투 + 우표 + 우편 소인 + 마스킹테이프로 "이제 보낼 준비가 됐다" 느낌.
@@ -12,6 +34,8 @@ export default function Complete() {
   const { id } = useParams()
   const [toast, setToast] = useState('')
   const [show, setShow] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const item = getItem(id)
 
   const link = `${window.location.origin}/view/${id}`
 
@@ -40,6 +64,34 @@ export default function Complete() {
       showToast('복사됐어요. 이제 마음을 보내면 돼요.')
     } catch (e) {
       showToast('복사에 실패했어요. 링크를 직접 선택해주세요.')
+    }
+  }
+
+  const share = async () => {
+    if (sharing) return
+    setSharing(true)
+    try {
+      const blob = await buildStoryImage({
+        type: 'sent',
+        receiverName: item?.receiverName || '받는 이에게',
+        url: link
+      })
+      const res = await shareToInstagramStory({
+        blob,
+        url: link,
+        fileName: `badajwo-letter.png`
+      })
+      if (res.aborted) {
+        // 취소
+      } else if (res.method === 'webshare') {
+        showToast('공유 시트에서 인스타그램 → 스토리에 추가를 선택하세요.')
+      } else {
+        showToast('이미지를 저장했어요. 인스타에서 스토리에 추가하세요.')
+      }
+    } catch (e) {
+      showToast('이미지 만들기에 실패했어요. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -222,6 +274,12 @@ export default function Complete() {
 
       {/* 버튼 */}
       <div className="space-y-3">
+        <MotionButton variant="accent" onClick={share} disabled={sharing}>
+          <span className="inline-flex items-center gap-2">
+            <InstagramGlyph size={18} />
+            {sharing ? '스토리 이미지 만드는 중…' : '인스타 스토리에 공유'}
+          </span>
+        </MotionButton>
         <MotionButton variant="primary" onClick={copy}>
           편지 링크 복사하기
         </MotionButton>

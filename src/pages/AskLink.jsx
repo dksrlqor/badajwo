@@ -5,6 +5,28 @@ import MotionButton from '../components/MotionButton'
 import Toast from '../components/Toast'
 import { getAskRequest } from '../utils/storage'
 import { AirmailBorder, PaperStamp, Postmark, OrnamentLine } from '../components/VintageMail'
+import { buildStoryImage, shareToInstagramStory } from '../utils/storyImage'
+
+// 작은 인스타 글리프 (camera frame + dot)
+function InstagramGlyph({ size = 18, color = '#3D2E22' }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="1" fill={color} stroke="none" />
+    </svg>
+  )
+}
 
 // askRequest 가 만들어진 직후 — 스토리에 올릴 작은 "초대장" 카드.
 // "친구가 너에게 편지를 써줄 수 있는 링크" 가 책상 위 초대장처럼 놓여 있다.
@@ -13,6 +35,7 @@ export default function AskLink() {
   const navigate = useNavigate()
   const [toastMsg, setToastMsg] = useState('')
   const [show, setShow] = useState(false)
+  const [sharing, setSharing] = useState(false)
   const req = getAskRequest(id)
 
   if (!req) {
@@ -63,6 +86,34 @@ export default function AskLink() {
       showToast('복사됐어요. 스토리에 붙여보세요.')
     } catch {
       showToast('복사에 실패했어요. 직접 선택해주세요.')
+    }
+  }
+
+  const share = async () => {
+    if (sharing) return
+    setSharing(true)
+    try {
+      const blob = await buildStoryImage({
+        type: 'ask',
+        receiverName: req.receiverName,
+        url: link
+      })
+      const res = await shareToInstagramStory({
+        blob,
+        url: link,
+        fileName: `badajwo-${req.receiverName}-ask.png`
+      })
+      if (res.aborted) {
+        // 사용자가 공유를 취소했을 뿐
+      } else if (res.method === 'webshare') {
+        showToast('공유 시트에서 인스타그램 → 스토리에 추가를 선택하세요.')
+      } else {
+        showToast('이미지를 저장했어요. 인스타에서 스토리에 추가하세요.')
+      }
+    } catch (e) {
+      showToast('이미지 만들기에 실패했어요. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -225,6 +276,12 @@ export default function AskLink() {
       </motion.div>
 
       <div className="space-y-3">
+        <MotionButton variant="accent" onClick={share} disabled={sharing}>
+          <span className="inline-flex items-center gap-2">
+            <InstagramGlyph size={18} />
+            {sharing ? '스토리 이미지 만드는 중…' : '인스타 스토리에 공유'}
+          </span>
+        </MotionButton>
         <MotionButton variant="primary" onClick={copy}>
           링크 복사하기
         </MotionButton>
@@ -234,6 +291,23 @@ export default function AskLink() {
         <MotionButton variant="ghost" onClick={() => navigate('/')}>
           홈으로
         </MotionButton>
+      </div>
+
+      {/* 안내 — 공유 동작 설명 */}
+      <div
+        className="mt-5 mx-2 text-[11px] leading-relaxed"
+        style={{
+          color: '#86705E',
+          padding: '10px 12px',
+          background: 'rgba(255, 252, 245, 0.6)',
+          borderRadius: '4px 6px 5px 7px',
+          border: '1px dashed rgba(92, 62, 40, 0.20)'
+        }}
+      >
+        모바일에서 "인스타 스토리에 공유" 를 누르면 빈티지 봉투 이미지가 만들어지고
+        OS 공유 시트가 열려요. 거기서 인스타그램 → <b>스토리에 추가</b> 를 선택하면
+        그 이미지가 그대로 스토리 배경이 돼요. 링크는 이미지 안에 적혀 있고, 원하면
+        인스타 스티커로 링크를 따로 붙여도 좋아요.
       </div>
 
       <Toast message={toastMsg} show={show} />
