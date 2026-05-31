@@ -296,12 +296,9 @@ export default function Privacy() {
         <Section title="12. 문의">
           <ul className="list-disc pl-5">
             <li>서비스명: 받아줘</li>
-            <li>문의 이메일: [운영자 이메일 입력]</li>
-            <li>운영자: [운영자 이름 또는 팀명 입력]</li>
+            <li>문의 이메일: hpq7khgyqd@privaterelay.appleid.com</li>
+            <li>운영자: 받아줘 운영자</li>
           </ul>
-          <p className="mt-3" style={{ color: '#86705E' }}>
-            실제 배포 전 운영자 이메일을 반드시 입력해주세요.
-          </p>
         </Section>
 
         <Section title="13. 처리방침 변경">
@@ -311,7 +308,7 @@ export default function Privacy() {
             페이지를 통해 안내합니다.
           </p>
           <p className="mt-3" style={{ color: '#86705E' }}>
-            시행일: 2026년 [월] [일]
+            시행일: 2026년 6월 1일
           </p>
         </Section>
       </div>
