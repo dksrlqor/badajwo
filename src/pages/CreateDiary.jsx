@@ -177,7 +177,7 @@ export default function CreateDiary() {
                       className="field"
                       value={data.receiverName}
                       onChange={(e) => update('receiverName', e.target.value)}
-                      placeholder="예) 지수"
+                      placeholder="받는 사람 이름"
                     />
                   </div>
                   <div>
@@ -186,7 +186,7 @@ export default function CreateDiary() {
                       className="field"
                       value={data.senderName}
                       onChange={(e) => update('senderName', e.target.value)}
-                      placeholder="이름이나 별명 (예: 기백, ㅇㅇ, 익명)"
+                      placeholder="이름이나 별명"
                       maxLength={NAME_MAX}
                     />
                     <p className="text-xs text-ink-500 mt-2 leading-relaxed">

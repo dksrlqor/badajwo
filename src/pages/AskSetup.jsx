@@ -73,7 +73,7 @@ export default function AskSetup() {
               setName(e.target.value)
               setError('')
             }}
-            placeholder="내 이름이나 별명 (예: 기백)"
+            placeholder="내 이름이나 별명"
             maxLength={12}
             autoFocus
           />
