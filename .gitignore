@@ -4,3 +4,6 @@ dist
 .env
 .env.local
 .vite
+# 임시 커밋 메시지 파일
+COMMIT_MSG.tmp
+*.commitmsg.tmp
