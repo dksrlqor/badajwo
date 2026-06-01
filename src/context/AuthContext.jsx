@@ -7,7 +7,8 @@ import {
   findOrCreateMockUser,
   setUsername as storeSetUsername,
   updateUserProfile,
-  getUser
+  getUser,
+  deleteAccount as storeDeleteAccount
 } from '../utils/storage'
 
 const AuthContext = createContext(null)
@@ -100,6 +101,15 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
+  // 영구 계정 삭제. localStorage 의 본인 데이터 + cascade 까지 일괄 처리.
+  // 백엔드 이전 시에도 같은 시그니처로 서버 호출만 추가하면 됨.
+  const deleteAccount = useCallback(() => {
+    if (!user) return { ok: false, reason: '로그인이 필요해요.' }
+    const res = storeDeleteAccount(user.id)
+    if (res.ok) setUser(null)
+    return res
+  }, [user])
+
   // 다른 탭에서 로그인 / 로그아웃 했을 때 동기화
   useEffect(() => {
     const onStorage = (e) => {
@@ -118,6 +128,7 @@ export function AuthProvider({ children }) {
     signInWithGoogleCredential,
     signInMock,
     signOut,
+    deleteAccount,
     setUsername,
     updateProfile,
     refreshUser

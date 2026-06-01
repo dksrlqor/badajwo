@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { listInboxFor, listArchiveFor, listPublicFor, presentSender } from '../utils/storage'
@@ -37,10 +37,12 @@ const TABS = [
 
 export default function Me() {
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
+  const { user, signOut, deleteAccount } = useAuth()
   const [tab, setTab] = useState('inbox')
   const [toast, setToast] = useState({ message: '', show: false })
   const [sharing, setSharing] = useState(false)
+  // 계정 삭제 상태 — closed | confirming | deleting
+  const [deleteStage, setDeleteStage] = useState('closed')
 
   useEffect(() => {
     if (!user) navigate('/login', { replace: true })
@@ -281,8 +283,179 @@ export default function Me() {
         </ul>
       )}
 
+      {/* ───── 위험 영역 — 계정 삭제 ───── */}
+      <DangerZone
+        deleteStage={deleteStage}
+        onOpen={() => setDeleteStage('confirming')}
+        onCancel={() => setDeleteStage('closed')}
+        onConfirm={() => {
+          if (deleteStage !== 'confirming') return
+          setDeleteStage('deleting')
+          // 살짝 모션 보여주고 처리 — 사용자가 "지워지는 중" 인지하도록
+          window.setTimeout(() => {
+            const res = deleteAccount()
+            if (!res?.ok) {
+              showToast(res?.reason || '삭제하지 못했어요. 잠시 후 다시 시도해주세요.')
+              setDeleteStage('closed')
+              return
+            }
+            showToast('계정이 삭제되었어요. 안녕히 가세요.')
+            window.setTimeout(() => navigate('/', { replace: true }), 1100)
+          }, 380)
+        }}
+      />
+
       <Toast message={toast.message} show={toast.show} />
     </motion.div>
+  )
+}
+
+// ─── 위험 영역 — 빨간 dashed border + 두 단계 확인 ─────────
+function DangerZone({ deleteStage, onOpen, onCancel, onConfirm }) {
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.18, duration: 0.4 }}
+      className="mx-1 mt-10"
+    >
+      <div
+        className="text-[10px] mb-2"
+        style={{ color: '#86705E', letterSpacing: '0.22em' }}
+      >
+        위험 영역
+      </div>
+      <div
+        className="relative paper-noise"
+        style={{
+          background: '#FBF0DC',
+          padding: '18px 18px 16px',
+          borderRadius: '6px 8px 7px 5px',
+          border: '1.5px dashed rgba(199, 68, 62, 0.45)',
+          boxShadow:
+            '0 1px 0 rgba(255,255,255,0.55) inset, 0 1px 3px rgba(199, 68, 62, 0.10)'
+        }}
+      >
+        <div
+          aria-hidden
+          className="masking-tape tape-rust"
+          style={{
+            width: 70,
+            height: 14,
+            top: -7,
+            left: 22,
+            transform: 'rotate(-8deg)'
+          }}
+        />
+
+        <AnimatePresence mode="wait" initial={false}>
+          {deleteStage === 'closed' && (
+            <motion.div
+              key="rest"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.25 }}
+            >
+              <h3
+                className="text-[14px] font-bold mb-1"
+                style={{
+                  color: '#3D2E22',
+                  fontFamily: "'Apple SD Gothic Neo', Georgia, serif"
+                }}
+              >
+                계정 삭제하기
+              </h3>
+              <p
+                className="text-[11px] leading-relaxed mb-3"
+                style={{ color: '#5A4538' }}
+              >
+                받은 편지, 보관함, 만든 간단 링크와 그 안의 메시지가 모두 지워져요.
+                다른 사람에게 보낸 편지의 내 신원은 익명으로 바뀌어요. 되돌릴 수 없어요.
+              </p>
+              <button
+                type="button"
+                onClick={onOpen}
+                className="text-[12px] font-semibold"
+                style={{
+                  background: 'transparent',
+                  color: '#C7443E',
+                  border: '1.5px dashed rgba(199, 68, 62, 0.45)',
+                  borderRadius: '4px 6px 5px 7px',
+                  padding: '8px 14px',
+                  cursor: 'pointer'
+                }}
+              >
+                계정 삭제하기
+              </button>
+            </motion.div>
+          )}
+
+          {(deleteStage === 'confirming' || deleteStage === 'deleting') && (
+            <motion.div
+              key="confirm"
+              initial={{ opacity: 0, y: 6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.3 }}
+            >
+              <h3
+                className="text-[14px] font-bold mb-1"
+                style={{
+                  color: '#C7443E',
+                  fontFamily: "'Apple SD Gothic Neo', Georgia, serif"
+                }}
+              >
+                정말 삭제할까요?
+              </h3>
+              <p
+                className="text-[11px] leading-relaxed mb-3"
+                style={{ color: '#5A4538' }}
+              >
+                받은 편지, 보관함, 내가 만든 간단 링크 + 그 메시지가 모두 사라지고
+                되돌릴 수 없어요. 다른 사람에게 보낸 편지의 내 신원은 익명으로 바뀝니다.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onConfirm}
+                  disabled={deleteStage === 'deleting'}
+                  className="text-[12px] font-semibold flex-1"
+                  style={{
+                    background: '#C7443E',
+                    color: '#FDF8EE',
+                    border: 'none',
+                    borderRadius: '4px 6px 5px 7px',
+                    padding: '9px 14px',
+                    cursor: deleteStage === 'deleting' ? 'wait' : 'pointer',
+                    opacity: deleteStage === 'deleting' ? 0.7 : 1
+                  }}
+                >
+                  {deleteStage === 'deleting' ? '지우는 중…' : '네, 삭제할게요'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  disabled={deleteStage === 'deleting'}
+                  className="text-[12px] font-semibold"
+                  style={{
+                    background: '#FDF8EE',
+                    color: '#5A4538',
+                    border: '1.5px dashed rgba(92, 62, 40, 0.32)',
+                    borderRadius: '4px 6px 5px 7px',
+                    padding: '9px 14px',
+                    cursor: deleteStage === 'deleting' ? 'not-allowed' : 'pointer',
+                    opacity: deleteStage === 'deleting' ? 0.5 : 1
+                  }}
+                >
+                  취소
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </motion.section>
   )
 }
 

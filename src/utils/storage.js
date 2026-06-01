@@ -414,6 +414,96 @@ export function presentSender(letter) {
   return { label: '익명', detail: null, isAnonymous: true }
 }
 
+// ─── 계정 삭제 ──────────────────────────────────────────
+// localStorage 한정 — 이 브라우저의 다음 데이터를 모두 처리한다.
+//   1) users / usernameToId / googleToId 에서 본인 제거
+//   2) letters: receiverId === userId 인 항목 삭제 (받은 편지 / 보관 / 공개 / 삭제 상태 무관)
+//   3) letters: senderUserId === userId 인 항목은 anonymize — senderMode → 'anonymous',
+//      senderUserId / senderUsername / senderName 전부 null. 받은 사람의 편지지는 보존하되
+//      너 신원만 wipe (right to be forgotten).
+//   4) quickLinks: createdByUserId === userId 인 항목 삭제. 그 quickLinkId 에 묶인
+//      quickMessages 도 cascade 삭제.
+//   5) session clear.
+//
+// 함수 시그니처 (deleteAccount(userId)) 는 백엔드 이전 시에도 그대로 유지하면 됨.
+export function deleteAccount(userId) {
+  if (!userId) return { ok: false, reason: '계정을 찾지 못했어요.' }
+  const users = readJSON(USERS_KEY, {})
+  const user = users[userId]
+  if (!user) return { ok: false, reason: '계정을 찾지 못했어요.' }
+
+  // 1) users / usernameToId / googleToId
+  delete users[userId]
+  writeJSON(USERS_KEY, users)
+  if (user.username) {
+    const um = readJSON(USERNAME_KEY, {})
+    if (um[user.username] === userId) {
+      delete um[user.username]
+      writeJSON(USERNAME_KEY, um)
+    }
+  }
+  if (user.googleSub) {
+    const gm = readJSON(GOOGLE_KEY, {})
+    if (gm[user.googleSub] === userId) {
+      delete gm[user.googleSub]
+      writeJSON(GOOGLE_KEY, gm)
+    }
+  }
+
+  // 2) + 3) letters
+  const letters = readJSON(LETTERS_KEY, {})
+  let lettersChanged = false
+  for (const id of Object.keys(letters)) {
+    const l = letters[id]
+    if (l.receiverId === userId) {
+      delete letters[id]
+      lettersChanged = true
+      continue
+    }
+    if (l.senderUserId === userId) {
+      letters[id] = {
+        ...l,
+        senderMode: 'anonymous',
+        senderUserId: null,
+        senderUsername: null,
+        senderName: null,
+        updatedAt: Date.now()
+      }
+      lettersChanged = true
+    }
+  }
+  if (lettersChanged) writeJSON(LETTERS_KEY, letters)
+
+  // 4) quickLinks (created by user) + cascade quickMessages
+  const links = readJSON(QUICK_LINKS_KEY, {})
+  const codeMap = readJSON(QUICK_CODE_KEY, {})
+  const msgs = readJSON(QUICK_MESSAGES_KEY, {})
+  const removedLinkIds = new Set()
+  for (const id of Object.keys(links)) {
+    if (links[id].createdByUserId === userId) {
+      removedLinkIds.add(id)
+      const code = links[id].code
+      if (code && codeMap[code] === id) delete codeMap[code]
+      delete links[id]
+    }
+  }
+  if (removedLinkIds.size > 0) {
+    writeJSON(QUICK_LINKS_KEY, links)
+    writeJSON(QUICK_CODE_KEY, codeMap)
+    for (const mid of Object.keys(msgs)) {
+      if (removedLinkIds.has(msgs[mid].quickLinkId)) {
+        delete msgs[mid]
+      }
+    }
+    writeJSON(QUICK_MESSAGES_KEY, msgs)
+  }
+
+  // 5) session
+  clearSession()
+
+  return { ok: true }
+}
+
 // ─── quick links — letters / inbox 와 완전히 분리된 일회성 편지 링크 ──
 // quickLink shape: { id, code, createdByUserId | null, createdAt, expiresAt | null, status: 'active'|'closed' }
 // quickMessage shape: { id, quickLinkId, senderMode: 'anonymous'|'name', senderDisplayName, content, createdAt }
