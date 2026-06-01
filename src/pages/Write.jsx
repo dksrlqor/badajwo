@@ -75,17 +75,17 @@ export default function Write() {
           tapeWidth={92}
           rotate={0.6}
           stampVariant="airmail"
-          title="간단 링크 만들기"
+          title="간단편지 링크 만들기"
           desc={
             <>
-              아이디를 몰라도 괜찮아요.
+              마음을 적고, 사진과 노래를 담아
               <br />
-              편지 링크를 만들어 친구에게 보내고,
+              하나의 편지 링크로 만들어보세요.
               <br />
-              그 링크 안에서 간단하게 마음을 주고받을 수 있어요.
+              친구가 링크를 열면 편지가 펼쳐져요.
             </>
           }
-          button="링크 만들기"
+          button="편지 만들러 가기"
           onClick={() => navigate('/quick/new')}
           delay={0.22}
         />

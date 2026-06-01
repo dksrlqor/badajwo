@@ -15,10 +15,13 @@ const USERNAME_KEY  = 'badajwo:usernameToId' // { [usernameLower]: userId }
 const GOOGLE_KEY    = 'badajwo:googleToId'   // { [googleSub]: userId }
 const LETTERS_KEY   = 'badajwo:letters'      // { [id]: letter }
 const SESSION_KEY   = 'badajwo:session'      // userId string
-// 간단 링크 — letters / user inbox 와 완전히 분리.
+// 간단 링크 (옛 흐름 — 친구가 빈 링크에 메시지 남기는 구조). 사용 안 함, read 만 유지.
 const QUICK_LINKS_KEY    = 'badajwo:quickLinks'    // { [id]: quickLink }
 const QUICK_CODE_KEY     = 'badajwo:quickCodeToId' // { [code]: quickLinkId }
 const QUICK_MESSAGES_KEY = 'badajwo:quickMessages' // { [id]: quickMessage }
+// 간단 편지 (새 흐름 — 작성자가 만든 완성 편지를 공유 링크로 보여줌). letters / user inbox / quickLinks 와 완전히 분리.
+const SIMPLE_LETTERS_KEY = 'badajwo:simpleLetters'      // { [id]: simpleLetter }
+const SIMPLE_CODE_KEY    = 'badajwo:simpleLetterCodeToId' // { [code]: simpleLetterId }
 
 // ── 기존 legacy 키 (옛 메인 플로우용 — 새 메인에서는 사용 안 함) ──
 const LEGACY_ITEMS_KEY = 'badajwo:items'
@@ -498,6 +501,23 @@ export function deleteAccount(userId) {
     writeJSON(QUICK_MESSAGES_KEY, msgs)
   }
 
+  // 4-b) simpleLetters (created by user) — 본인이 만든 공유 편지 전부 hard delete.
+  const sLetters = readJSON(SIMPLE_LETTERS_KEY, {})
+  const sCodeMap = readJSON(SIMPLE_CODE_KEY, {})
+  let sChanged = false
+  for (const id of Object.keys(sLetters)) {
+    if (sLetters[id].createdByUserId === userId) {
+      const code = sLetters[id].code
+      if (code && sCodeMap[code] === id) delete sCodeMap[code]
+      delete sLetters[id]
+      sChanged = true
+    }
+  }
+  if (sChanged) {
+    writeJSON(SIMPLE_LETTERS_KEY, sLetters)
+    writeJSON(SIMPLE_CODE_KEY, sCodeMap)
+  }
+
   // 5) session
   clearSession()
 
@@ -604,6 +624,158 @@ export function listQuickLinksByCreator(userId) {
   return Object.values(links)
     .filter((l) => l.createdByUserId === userId)
     .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+}
+
+// ─── simple letters — 작성자가 완성한 편지를 공유 링크로 보여주는 흐름 ──
+// quickLinks(친구가 메시지 남기는 빈 링크) 와 letters(인박스) 와는 완전히 분리.
+// simpleLetter shape:
+//   { id, code, type: 'simple_shared_letter',
+//     recipientName, senderName, title, content,
+//     templateId,
+//     photos: [{ src, alt, rotation, tape }],
+//     music: { provider, originalUrl, embedUrl, canEmbed, title } | null,
+//     createdByUserId | null, createdAt, expiresAt | null,
+//     viewCount, isDeleted }
+//
+// 백엔드 이행 시: simple_letters 테이블 + (code) unique index, photos/music 은 jsonb.
+
+function genSimpleLetterCode() {
+  // 8자 base36 — quickLinks(6자) 와 충돌 안 나게 + 추측 어렵게.
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  let out = ''
+  for (let i = 0; i < 8; i++) {
+    out += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return out
+}
+
+const SIMPLE_TITLE_MAX = 60
+const SIMPLE_NAME_MAX = 30
+const SIMPLE_CONTENT_MAX = 4000
+const SIMPLE_PHOTO_MAX = 3
+
+function sanitizeSimpleInput(input) {
+  const recipientName = String(input?.recipientName || '').trim().slice(0, SIMPLE_NAME_MAX)
+  const senderName = String(input?.senderName || '').trim().slice(0, SIMPLE_NAME_MAX)
+  const title = String(input?.title || '').trim().slice(0, SIMPLE_TITLE_MAX)
+  const content = String(input?.content || '').slice(0, SIMPLE_CONTENT_MAX)
+  const templateId = String(input?.templateId || '').trim() || null
+
+  // photos 정리 — 객체 형태 강제, 최대 3장.
+  const photosIn = Array.isArray(input?.photos) ? input.photos : []
+  const photos = photosIn
+    .filter((p) => p && typeof p.src === 'string' && p.src)
+    .slice(0, SIMPLE_PHOTO_MAX)
+    .map((p, i) => ({
+      src: p.src,
+      alt: String(p.alt || '').slice(0, 80),
+      rotation: typeof p.rotation === 'number' ? p.rotation : (i % 2 === 0 ? -2.5 : 2.5),
+      tape: typeof p.tape === 'string' ? p.tape : 'pink'
+    }))
+
+  // music — parseMusicLink 결과를 그대로 받음. canEmbed 가 boolean 인지만 확인.
+  let music = null
+  if (input?.music && (input.music.originalUrl || input.music.embedUrl)) {
+    music = {
+      provider: String(input.music.provider || 'unknown'),
+      originalUrl: String(input.music.originalUrl || ''),
+      embedUrl: input.music.embedUrl ? String(input.music.embedUrl) : null,
+      canEmbed: !!input.music.canEmbed,
+      title: String(input.music.title || '').slice(0, 120)
+    }
+  }
+  return { recipientName, senderName, title, content, templateId, photos, music }
+}
+
+export function createSimpleLetter(rawInput, { createdByUserId = null } = {}) {
+  const data = sanitizeSimpleInput(rawInput)
+  if (!data.content && !data.title) return null
+  if (!data.templateId) return null
+
+  // code collision 회피 — 16회 시도 후 fallback.
+  const codeMap = readJSON(SIMPLE_CODE_KEY, {})
+  let code = ''
+  for (let i = 0; i < 16; i++) {
+    const c = genSimpleLetterCode()
+    if (!codeMap[c]) { code = c; break }
+  }
+  if (!code) code = genSimpleLetterCode() + Math.random().toString(36).slice(2, 4)
+
+  const id = makeId()
+  const letter = {
+    id,
+    code,
+    type: 'simple_shared_letter',
+    recipientName: data.recipientName,
+    senderName: data.senderName,
+    title: data.title,
+    content: data.content,
+    templateId: data.templateId,
+    photos: data.photos,
+    music: data.music,
+    createdByUserId: createdByUserId || null,
+    createdAt: Date.now(),
+    expiresAt: null,
+    viewCount: 0,
+    isDeleted: false
+  }
+  const letters = readJSON(SIMPLE_LETTERS_KEY, {})
+  letters[id] = letter
+  codeMap[code] = id
+  if (!writeJSON(SIMPLE_LETTERS_KEY, letters)) return null
+  writeJSON(SIMPLE_CODE_KEY, codeMap)
+  return letter
+}
+
+export function getSimpleLetterByCode(code) {
+  if (!code) return null
+  const map = readJSON(SIMPLE_CODE_KEY, {})
+  const id = map[String(code).toLowerCase()]
+  if (!id) return null
+  const letters = readJSON(SIMPLE_LETTERS_KEY, {})
+  const l = letters[id]
+  if (!l || l.isDeleted) return null
+  return l
+}
+
+export function getSimpleLetterById(id) {
+  if (!id) return null
+  const letters = readJSON(SIMPLE_LETTERS_KEY, {})
+  const l = letters[id]
+  if (!l || l.isDeleted) return null
+  return l
+}
+
+export function incrementSimpleLetterView(code) {
+  if (!code) return
+  const map = readJSON(SIMPLE_CODE_KEY, {})
+  const id = map[String(code).toLowerCase()]
+  if (!id) return
+  const letters = readJSON(SIMPLE_LETTERS_KEY, {})
+  const l = letters[id]
+  if (!l || l.isDeleted) return
+  letters[id] = { ...l, viewCount: (l.viewCount || 0) + 1 }
+  writeJSON(SIMPLE_LETTERS_KEY, letters)
+}
+
+export function listSimpleLettersByCreator(userId) {
+  if (!userId) return []
+  const letters = readJSON(SIMPLE_LETTERS_KEY, {})
+  return Object.values(letters)
+    .filter((l) => l.createdByUserId === userId && !l.isDeleted)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+}
+
+export function softDeleteSimpleLetter(id, currentUserId = null) {
+  if (!id) return false
+  const letters = readJSON(SIMPLE_LETTERS_KEY, {})
+  const l = letters[id]
+  if (!l) return false
+  // 작성자만 삭제. 비로그인 작성 편지(createdByUserId === null)는 일단 차단 (브라우저 기록 기반은 별도 처리).
+  if (l.createdByUserId && currentUserId !== l.createdByUserId) return false
+  letters[id] = { ...l, isDeleted: true }
+  writeJSON(SIMPLE_LETTERS_KEY, letters)
+  return true
 }
 
 // ─── 옛 함수들 (legacy items / asks) ────────────────────
