@@ -320,12 +320,6 @@ function DangerZone({ deleteStage, onOpen, onCancel, onConfirm }) {
       className="mx-1 mt-10"
     >
       <div
-        className="text-[10px] mb-2"
-        style={{ color: '#86705E', letterSpacing: '0.22em' }}
-      >
-        위험 영역
-      </div>
-      <div
         className="relative paper-noise"
         style={{
           background: '#FBF0DC',
