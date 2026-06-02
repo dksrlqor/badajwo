@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -21,23 +21,33 @@ export default function QuickView() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const letter = useMemo(() => getSimpleLetterByCode(code), [code])
   const previewMode =
     new URLSearchParams(location.search).get('preview') === '1'
 
+  const [letter, setLetter] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [phase, setPhase] = useState(previewMode ? 'content' : 'envelope')
   const reduceMotion =
     typeof window !== 'undefined' &&
     window.matchMedia &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  // 첫 열람 시 view count 증가 — 미리보기 모드는 제외, 작성자 본인도 제외.
+  // letter 비동기 로딩 + 첫 열람 시 view count 증가.
   useEffect(() => {
-    if (!letter) return
-    if (previewMode) return
-    if (user && user.id === letter.createdByUserId) return
-    incrementSimpleLetterView(code)
-    // mount 시 1회만
+    let mounted = true
+    setLoading(true)
+    getSimpleLetterByCode(code).then((l) => {
+      if (!mounted) return
+      setLetter(l)
+      setLoading(false)
+      if (!l) return
+      if (previewMode) return
+      if (user && user.id === l.createdByUserId) return
+      // best-effort, await 불필요
+      incrementSimpleLetterView(code)
+    })
+    return () => { mounted = false }
+    // mount + code 변경 시만
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code])
 
@@ -51,6 +61,10 @@ export default function QuickView() {
       try { document.head.removeChild(meta) } catch {}
     }
   }, [])
+
+  if (loading) {
+    return <LoadingView />
+  }
 
   if (!letter) {
     return <NotFoundView onHome={() => navigate('/')} />
@@ -143,6 +157,24 @@ export default function QuickView() {
         </motion.div>
       )}
     </motion.div>
+  )
+}
+
+function LoadingView() {
+  return (
+    <div className="pt-16 text-center px-4">
+      <motion.div
+        initial={{ opacity: 0.4 }}
+        animate={{ opacity: [0.4, 1, 0.4] }}
+        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+        className="text-3xl mb-3"
+      >
+        ✉
+      </motion.div>
+      <p className="text-[12px]" style={{ color: '#86705E' }}>
+        편지를 꺼내고 있어요…
+      </p>
+    </div>
   )
 }
 

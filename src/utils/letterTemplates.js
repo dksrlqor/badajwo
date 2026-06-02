@@ -1,62 +1,81 @@
 // 받아줘 간단편지 — 편지지 템플릿 메타데이터.
-// 실제 렌더링은 components/letterTemplates/<id>Template.jsx 가 담당한다.
+// 실제 렌더링은 components/letterTemplates/<Name>Template.jsx 가 담당한다.
 //
-// 템플릿을 새로 추가할 때:
-//   1) 이 배열에 메타데이터 항목을 추가
-//   2) components/letterTemplates/ 아래에 컴포넌트 파일 추가
-//   3) LetterTemplateRenderer.jsx 의 import/매핑에 등록
+// 템플릿 ID 는 첨부 PDF 시각 분석을 기반으로 한 시각 구도 기반의 이름이다.
+//   vintage_scrapbook   — Beige Brown Scrapbook Vintage Thank You Letter PDF 구도
+//   romantic_pink       — Pink and Beige Romantic Anniversary Letter PDF 구도
+//   photo_frame_minimal — Black & White Simple Photo Frame Wedding Thank You PDF 구도
 //
-// id 는 storage 의 simpleLetter.templateId 와 동일한 문자열이어야 한다.
-// 백엔드 이전 시에는 이 메타데이터를 서버 응답으로 받아도 좋다.
+// 새 템플릿 추가:
+//   1) 이 배열에 메타데이터 항목 추가
+//   2) components/letterTemplates/ 아래 컴포넌트 추가
+//   3) LetterTemplateRenderer.jsx 의 import 와 매핑에 등록
 
 export const LETTER_TEMPLATES = [
   {
-    id: 'friend-scrapbook-letter',
-    name: '따뜻한 스크랩북',
+    id: 'vintage_scrapbook',
+    name: '빈티지 스크랩북',
     category: 'friend',
-    description: '친구에게 보내기 좋은 빈티지 스크랩북 감성 편지지',
+    description: '베이지 종이 위 찢어진 편지지, 리본·꽃·테이프가 흩어진 따뜻한 손편지 감성',
     mood: 'warm, vintage, scrapbook',
     supportsPhotos: true,
     supportsMusic: true,
-    // 미리보기 카드용 색 토큰 — 실제 본문 렌더 색은 컴포넌트가 정의.
     swatch: {
-      paper: '#F1E2C8',
-      accent: '#A67A4A',
-      ink: '#4A3320'
+      paper: '#FAF3E0',
+      accent: '#A6362A',
+      ink: '#3a2614',
+      bg: '#A88E68'
     }
   },
   {
-    id: 'couple-romantic-letter',
-    name: '분홍빛 마음',
+    id: 'romantic_pink',
+    name: '로맨틱 핑크',
     category: 'couple',
-    description: '연인과 기념일에 어울리는 로맨틱 편지지',
+    description: '핑크 베이지 톤의 둥근 편지지 + 큰 outline 하트와 Love 스티커',
     mood: 'romantic, soft, pink',
     supportsPhotos: true,
     supportsMusic: true,
     swatch: {
-      paper: '#FBE6E8',
-      accent: '#C57F86',
-      ink: '#4A2E2A'
+      paper: '#F4D9DC',
+      accent: '#A8333F',
+      ink: '#3A2A26',
+      bg: '#ECDDC4'
     }
   },
   {
-    id: 'classic-photo-letter',
-    name: '차분한 포토 편지',
+    id: 'photo_frame_minimal',
+    name: '포토 프레임 미니멀',
     category: 'etc',
-    description: '고마운 사람에게 보내기 좋은 깔끔한 포토 편지지',
-    mood: 'clean, classic, calm',
+    description: '큰 필기체 제목과 흑백 사진 프레임이 단정하게 어우러진 웨딩 감사 편지',
+    mood: 'clean, classic, photo',
     supportsPhotos: true,
     supportsMusic: true,
     swatch: {
-      paper: '#FBF7EE',
-      accent: '#2A241D',
-      ink: '#2A241D'
+      paper: '#FFFFFF',
+      accent: '#1a1a1a',
+      ink: '#1a1a1a',
+      bg: '#F6F1E7'
     }
   }
 ]
 
-export const DEFAULT_TEMPLATE_ID = 'friend-scrapbook-letter'
+export const DEFAULT_TEMPLATE_ID = 'vintage_scrapbook'
+
+// 옛 ID 호환 — localStorage 에 남아 있는 v3 데이터를 새 컴포넌트로 라우팅.
+const LEGACY_ID_MAP = {
+  'friend-scrapbook-letter': 'vintage_scrapbook',
+  'couple-romantic-letter': 'romantic_pink',
+  'classic-photo-letter': 'photo_frame_minimal'
+}
+
+export function resolveTemplateId(id) {
+  if (!id) return DEFAULT_TEMPLATE_ID
+  if (LEGACY_ID_MAP[id]) return LEGACY_ID_MAP[id]
+  if (LETTER_TEMPLATES.some((t) => t.id === id)) return id
+  return DEFAULT_TEMPLATE_ID
+}
 
 export function getTemplateMeta(id) {
-  return LETTER_TEMPLATES.find((t) => t.id === id) || LETTER_TEMPLATES[0]
+  const resolved = resolveTemplateId(id)
+  return LETTER_TEMPLATES.find((t) => t.id === resolved) || LETTER_TEMPLATES[0]
 }

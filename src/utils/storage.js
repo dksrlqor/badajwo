@@ -1,14 +1,16 @@
-// 받아줘 storage layer (v2).
-// 새 아키텍처: users 는 username 기반, letters 는 receiverId 로 inbox 분리.
-// receiver 는 URL username 조회 결과 / 검색 결과로만 결정되어야 한다.
-// auth.currentUser 가 receiver 로 자동 매핑되는 일이 없도록 storage 단에서도 강제하지 않는다.
+// 받아줘 storage layer (v3).
+// users / sessions / letters / quickLinks 는 여전히 localStorage 기반(개인 단위).
+// simpleLetters(공유 편지) 는 Supabase 가 활성이면 supabase, 아니면 localStorage fallback.
 //
-// 백엔드 (Supabase / Firebase) 로 옮길 때:
-//   - 모든 read/write 가 이 파일을 거치므로 함수 시그니처만 유지하면 됨
-//   - users 는 unique(username), unique(googleSub) 인덱스
-//   - letters 는 (receiverId, createdAt) 인덱스, RLS 로 receiverId === auth.uid 인 row 만 read
-//
-// NOTE: 평문 저장이라 실서비스 전엔 반드시 서버 측 보안 적용.
+// simple letter 함수들은 모두 async — 호출자는 await 사용.
+
+import {
+  supabase,
+  hasSupabase,
+  SIMPLE_LETTERS_TABLE,
+  LETTER_PHOTOS_BUCKET,
+  RPC_INCREMENT_VIEW
+} from './supabase'
 
 const USERS_KEY     = 'badajwo:users'        // { [id]: user }
 const USERNAME_KEY  = 'badajwo:usernameToId' // { [usernameLower]: userId }
@@ -627,20 +629,23 @@ export function listQuickLinksByCreator(userId) {
 }
 
 // ─── simple letters — 작성자가 완성한 편지를 공유 링크로 보여주는 흐름 ──
-// quickLinks(친구가 메시지 남기는 빈 링크) 와 letters(인박스) 와는 완전히 분리.
-// simpleLetter shape:
+// hasSupabase === true 면 Supabase (디바이스 간 공유 가능), 아니면 localStorage fallback (이 브라우저에서만).
+// 모든 함수는 async — 호출자는 await 필요.
+//
+// simpleLetter shape (camelCase 통일):
 //   { id, code, type: 'simple_shared_letter',
-//     recipientName, senderName, title, content,
-//     templateId,
+//     recipientName, senderName, title, content, templateId,
 //     photos: [{ src, alt, rotation, tape }],
 //     music: { provider, originalUrl, embedUrl, canEmbed, title } | null,
-//     createdByUserId | null, createdAt, expiresAt | null,
+//     createdByUserId | null, createdAt(ms), expiresAt(ms) | null,
 //     viewCount, isDeleted }
-//
-// 백엔드 이행 시: simple_letters 테이블 + (code) unique index, photos/music 은 jsonb.
+
+const SIMPLE_TITLE_MAX = 60
+const SIMPLE_NAME_MAX = 30
+const SIMPLE_CONTENT_MAX = 4000
+const SIMPLE_PHOTO_MAX = 5
 
 function genSimpleLetterCode() {
-  // 8자 base36 — quickLinks(6자) 와 충돌 안 나게 + 추측 어렵게.
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
   let out = ''
   for (let i = 0; i < 8; i++) {
@@ -649,11 +654,6 @@ function genSimpleLetterCode() {
   return out
 }
 
-const SIMPLE_TITLE_MAX = 60
-const SIMPLE_NAME_MAX = 30
-const SIMPLE_CONTENT_MAX = 4000
-const SIMPLE_PHOTO_MAX = 3
-
 function sanitizeSimpleInput(input) {
   const recipientName = String(input?.recipientName || '').trim().slice(0, SIMPLE_NAME_MAX)
   const senderName = String(input?.senderName || '').trim().slice(0, SIMPLE_NAME_MAX)
@@ -661,7 +661,6 @@ function sanitizeSimpleInput(input) {
   const content = String(input?.content || '').slice(0, SIMPLE_CONTENT_MAX)
   const templateId = String(input?.templateId || '').trim() || null
 
-  // photos 정리 — 객체 형태 강제, 최대 3장.
   const photosIn = Array.isArray(input?.photos) ? input.photos : []
   const photos = photosIn
     .filter((p) => p && typeof p.src === 'string' && p.src)
@@ -673,7 +672,6 @@ function sanitizeSimpleInput(input) {
       tape: typeof p.tape === 'string' ? p.tape : 'pink'
     }))
 
-  // music — parseMusicLink 결과를 그대로 받음. canEmbed 가 boolean 인지만 확인.
   let music = null
   if (input?.music && (input.music.originalUrl || input.music.embedUrl)) {
     music = {
@@ -687,12 +685,57 @@ function sanitizeSimpleInput(input) {
   return { recipientName, senderName, title, content, templateId, photos, music }
 }
 
-export function createSimpleLetter(rawInput, { createdByUserId = null } = {}) {
-  const data = sanitizeSimpleInput(rawInput)
-  if (!data.content && !data.title) return null
-  if (!data.templateId) return null
+function rowToSimpleLetter(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    code: row.code,
+    type: row.type || 'simple_shared_letter',
+    recipientName: row.recipient_name || '',
+    senderName: row.sender_name || '',
+    title: row.title || '',
+    content: row.content || '',
+    templateId: row.template_id,
+    photos: Array.isArray(row.photos) ? row.photos : [],
+    music: row.music || null,
+    createdByUserId: row.created_by_user_id || null,
+    createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+    expiresAt: row.expires_at ? new Date(row.expires_at).getTime() : null,
+    viewCount: row.view_count ?? 0,
+    isDeleted: !!row.is_deleted
+  }
+}
 
-  // code collision 회피 — 16회 시도 후 fallback.
+// dataURL → Blob → Supabase Storage 업로드 → 공개 URL 반환.
+// 이미 http(s) URL 이면 패스 (이미 업로드된 사진을 다시 사용하는 케이스).
+async function uploadPhotoIfNeeded(src, code, index) {
+  if (!src) return null
+  if (/^https?:\/\//i.test(src)) return src
+  if (!src.startsWith('data:')) return src
+  try {
+    const res = await fetch(src)
+    const blob = await res.blob()
+    const ext = (blob.type && blob.type.split('/')[1]) || 'jpg'
+    const path = `${code}/${index}.${ext.replace(/[^a-z0-9]/gi, '') || 'jpg'}`
+    const { error } = await supabase.storage
+      .from(LETTER_PHOTOS_BUCKET)
+      .upload(path, blob, {
+        contentType: blob.type || 'image/jpeg',
+        upsert: true,
+        cacheControl: '31536000'
+      })
+    if (error) throw error
+    const { data } = supabase.storage.from(LETTER_PHOTOS_BUCKET).getPublicUrl(path)
+    return data?.publicUrl || null
+  } catch (e) {
+    // 업로드 실패는 letter 생성을 막지 않는다 — 사진만 빠진 채로 진행.
+    console.warn('[badajwo] photo upload failed', e)
+    return null
+  }
+}
+
+// ── 로컬 fallback ─────────────────────────────────────
+function createSimpleLetterLocal(data, createdByUserId) {
   const codeMap = readJSON(SIMPLE_CODE_KEY, {})
   let code = ''
   for (let i = 0; i < 16; i++) {
@@ -700,7 +743,6 @@ export function createSimpleLetter(rawInput, { createdByUserId = null } = {}) {
     if (!codeMap[c]) { code = c; break }
   }
   if (!code) code = genSimpleLetterCode() + Math.random().toString(36).slice(2, 4)
-
   const id = makeId()
   const letter = {
     id,
@@ -727,7 +769,7 @@ export function createSimpleLetter(rawInput, { createdByUserId = null } = {}) {
   return letter
 }
 
-export function getSimpleLetterByCode(code) {
+function getSimpleLetterByCodeLocal(code) {
   if (!code) return null
   const map = readJSON(SIMPLE_CODE_KEY, {})
   const id = map[String(code).toLowerCase()]
@@ -738,15 +780,7 @@ export function getSimpleLetterByCode(code) {
   return l
 }
 
-export function getSimpleLetterById(id) {
-  if (!id) return null
-  const letters = readJSON(SIMPLE_LETTERS_KEY, {})
-  const l = letters[id]
-  if (!l || l.isDeleted) return null
-  return l
-}
-
-export function incrementSimpleLetterView(code) {
+function incrementSimpleLetterViewLocal(code) {
   if (!code) return
   const map = readJSON(SIMPLE_CODE_KEY, {})
   const id = map[String(code).toLowerCase()]
@@ -758,24 +792,124 @@ export function incrementSimpleLetterView(code) {
   writeJSON(SIMPLE_LETTERS_KEY, letters)
 }
 
-export function listSimpleLettersByCreator(userId) {
-  if (!userId) return []
-  const letters = readJSON(SIMPLE_LETTERS_KEY, {})
-  return Object.values(letters)
-    .filter((l) => l.createdByUserId === userId && !l.isDeleted)
-    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+// ── 공개 함수 (async) ──────────────────────────────────
+
+export async function createSimpleLetter(rawInput, { createdByUserId = null } = {}) {
+  const data = sanitizeSimpleInput(rawInput)
+  if (!data.content && !data.title) return null
+  if (!data.templateId) return null
+
+  if (!hasSupabase) {
+    return createSimpleLetterLocal(data, createdByUserId)
+  }
+
+  // 1) code 생성 — DB unique constraint 의존 + 충돌 시 retry.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const code = genSimpleLetterCode()
+
+    // 2) 사진 dataURL → Storage 업로드 (병렬). 업로드 실패한 자리는 그대로 제외.
+    const uploadedPhotos = await Promise.all(
+      data.photos.map(async (p, i) => {
+        const url = await uploadPhotoIfNeeded(p.src, code, i)
+        if (!url) return null
+        return { ...p, src: url }
+      })
+    )
+    const photos = uploadedPhotos.filter(Boolean)
+
+    // 3) insert
+    const row = {
+      code,
+      type: 'simple_shared_letter',
+      recipient_name: data.recipientName,
+      sender_name: data.senderName,
+      title: data.title,
+      content: data.content,
+      template_id: data.templateId,
+      photos,
+      music: data.music,
+      created_by_user_id: createdByUserId || null
+    }
+    const { data: inserted, error } = await supabase
+      .from(SIMPLE_LETTERS_TABLE)
+      .insert(row)
+      .select('*')
+      .single()
+
+    if (!error && inserted) return rowToSimpleLetter(inserted)
+
+    // unique violation (23505) → 다른 code 로 재시도, 그 외 에러는 실패.
+    if (error?.code === '23505') continue
+    console.warn('[badajwo] simple_letters insert error', error)
+    return null
+  }
+  return null
 }
 
-export function softDeleteSimpleLetter(id, currentUserId = null) {
+export async function getSimpleLetterByCode(code) {
+  if (!code) return null
+  if (!hasSupabase) return getSimpleLetterByCodeLocal(code)
+
+  const { data, error } = await supabase
+    .from(SIMPLE_LETTERS_TABLE)
+    .select('*')
+    .eq('code', String(code).toLowerCase())
+    .eq('is_deleted', false)
+    .maybeSingle()
+
+  if (error) {
+    console.warn('[badajwo] simple_letters select error', error)
+    return null
+  }
+  return rowToSimpleLetter(data)
+}
+
+export async function incrementSimpleLetterView(code) {
+  if (!code) return
+  if (!hasSupabase) return incrementSimpleLetterViewLocal(code)
+  try {
+    await supabase.rpc(RPC_INCREMENT_VIEW, { p_code: String(code).toLowerCase() })
+  } catch (e) {
+    // view count 는 best-effort. 실패해도 사용자 경험에 영향 X.
+  }
+}
+
+export async function listSimpleLettersByCreator(userId) {
+  if (!userId) return []
+  if (!hasSupabase) {
+    const letters = readJSON(SIMPLE_LETTERS_KEY, {})
+    return Object.values(letters)
+      .filter((l) => l.createdByUserId === userId && !l.isDeleted)
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+  }
+  const { data, error } = await supabase
+    .from(SIMPLE_LETTERS_TABLE)
+    .select('*')
+    .eq('created_by_user_id', userId)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+  if (error) {
+    console.warn('[badajwo] simple_letters list error', error)
+    return []
+  }
+  return (data || []).map(rowToSimpleLetter)
+}
+
+// 비로그인 작성 편지는 anon 권한으로 본인 row 식별 불가 → 삭제 불가.
+// 로그인 작성도 anon 정책 상 update 차단. 추후 service-role 기반 RPC 추가 필요.
+export async function softDeleteSimpleLetter(id, currentUserId = null) {
   if (!id) return false
-  const letters = readJSON(SIMPLE_LETTERS_KEY, {})
-  const l = letters[id]
-  if (!l) return false
-  // 작성자만 삭제. 비로그인 작성 편지(createdByUserId === null)는 일단 차단 (브라우저 기록 기반은 별도 처리).
-  if (l.createdByUserId && currentUserId !== l.createdByUserId) return false
-  letters[id] = { ...l, isDeleted: true }
-  writeJSON(SIMPLE_LETTERS_KEY, letters)
-  return true
+  if (!hasSupabase) {
+    const letters = readJSON(SIMPLE_LETTERS_KEY, {})
+    const l = letters[id]
+    if (!l) return false
+    if (l.createdByUserId && currentUserId !== l.createdByUserId) return false
+    letters[id] = { ...l, isDeleted: true }
+    writeJSON(SIMPLE_LETTERS_KEY, letters)
+    return true
+  }
+  // Supabase 모드에서는 anon 권한으로 update 불가 — 추후 별도 RPC 로 처리.
+  return false
 }
 
 // ─── 옛 함수들 (legacy items / asks) ────────────────────

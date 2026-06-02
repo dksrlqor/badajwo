@@ -1,17 +1,17 @@
-import FriendScrapbookTemplate from './FriendScrapbookTemplate'
-import CoupleRomanticTemplate from './CoupleRomanticTemplate'
-import ClassicPhotoTemplate from './ClassicPhotoTemplate'
+import VintageScrapbookTemplate from './VintageScrapbookTemplate'
+import RomanticPinkTemplate from './RomanticPinkTemplate'
+import PhotoFrameMinimalTemplate from './PhotoFrameMinimalTemplate'
+import { resolveTemplateId } from '../../utils/letterTemplates'
 
-// templateId 별 컴포넌트 매핑. 새 템플릿을 추가하면 여기와 utils/letterTemplates.js
-// 양쪽에 등록한다.
+// templateId 별 컴포넌트 매핑. 옛 v3 ID 도 letterTemplates.resolveTemplateId 를 거쳐 새 ID 로 변환됨.
 const TEMPLATE_MAP = {
-  'friend-scrapbook-letter': FriendScrapbookTemplate,
-  'couple-romantic-letter': CoupleRomanticTemplate,
-  'classic-photo-letter': ClassicPhotoTemplate
+  vintage_scrapbook: VintageScrapbookTemplate,
+  romantic_pink: RomanticPinkTemplate,
+  photo_frame_minimal: PhotoFrameMinimalTemplate
 }
 
 export default function LetterTemplateRenderer({ letter }) {
-  const id = letter?.templateId
-  const Component = TEMPLATE_MAP[id] || FriendScrapbookTemplate
+  const id = resolveTemplateId(letter?.templateId)
+  const Component = TEMPLATE_MAP[id] || VintageScrapbookTemplate
   return <Component letter={letter} />
 }

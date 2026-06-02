@@ -27,7 +27,7 @@ const NAME_MAX = 30
 const TITLE_MAX = 60
 const CONTENT_MAX = 4000
 const MUSIC_TITLE_MAX = 80
-const PHOTO_MAX = 3
+const PHOTO_MAX = 5
 
 const STEPS = ['write', 'decorate', 'preview', 'done']
 
@@ -107,17 +107,23 @@ export default function QuickNew() {
   const submit = async () => {
     if (submitting) return
     setSubmitting(true)
-    await new Promise((r) => window.setTimeout(r, 380))
-    const letter = createSimpleLetter(draftLetter, {
-      createdByUserId: user?.id || null
-    })
-    setSubmitting(false)
-    if (!letter) {
+    // 사진 업로드 + DB insert 라 시간이 좀 걸릴 수 있음. 별도 sleep 안 둠.
+    try {
+      const letter = await createSimpleLetter(draftLetter, {
+        createdByUserId: user?.id || null
+      })
+      if (!letter) {
+        setError('편지 링크를 만들지 못했어요. 잠시 후 다시 시도해주세요.')
+        return
+      }
+      setCreatedLetter(letter)
+      setStep('done')
+    } catch (e) {
+      console.warn('[badajwo] createSimpleLetter failed', e)
       setError('편지 링크를 만들지 못했어요. 잠시 후 다시 시도해주세요.')
-      return
+    } finally {
+      setSubmitting(false)
     }
-    setCreatedLetter(letter)
-    setStep('done')
   }
 
   return (
