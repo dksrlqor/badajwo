@@ -13,7 +13,7 @@ import {
 } from '../utils/storage'
 import MotionButton from '../components/MotionButton'
 import Toast from '../components/Toast'
-import { OrnamentLine, Postmark } from '../components/VintageMail'
+import LetterEnvelopeCard from '../components/LetterEnvelopeCard'
 
 // /letter/:id
 // 받은 편지 상세 — receiver 본인 또는 isPublic 일 때만 본문 노출.
@@ -150,51 +150,13 @@ export default function LetterDetail() {
         </div>
       ) : (
         <>
-          {/* 편지지 */}
-          <div
-            className="paper-noise relative mx-1 mb-5"
-            style={{
-              background: '#FDF8EE',
-              padding: '28px 22px 24px',
-              borderRadius: '10px 7px 12px 8px',
-              boxShadow:
-                '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 5px rgba(92,62,40,0.10), 0 14px 32px rgba(92,62,40,0.14)'
-            }}
-          >
-            <div
-              aria-hidden
-              className="masking-tape tape-orange"
-              style={{
-                width: 80,
-                height: 18,
-                top: -9,
-                left: '50%',
-                transform: 'translateX(-50%) rotate(-2deg)'
-              }}
+          {/* 항공우편 봉투 카드 */}
+          <div className="mb-6">
+            <LetterEnvelopeCard
+              letter={letterState}
+              senderLabel={sender.label}
+              isAnonymous={!!sender.isAnonymous}
             />
-
-            <div className="text-[12px]" style={{ color: '#86705E' }}>
-              To. <b style={{ color: '#3D2E22' }}>@{letterState.receiverUsername}</b>
-            </div>
-            <div
-              className="lined-paper mt-3"
-              style={{
-                fontSize: 15,
-                fontFamily: "'Apple SD Gothic Neo', Georgia, serif",
-                color: '#3D2E22',
-                whiteSpace: 'pre-wrap',
-                minHeight: 220
-              }}
-            >
-              {letterState.content}
-            </div>
-
-            <div
-              className="text-right text-[12px] mt-5 italic"
-              style={{ color: '#5A4538', fontFamily: 'Georgia, serif' }}
-            >
-              From. {sender.label}
-            </div>
           </div>
 
           {isOwner && (
