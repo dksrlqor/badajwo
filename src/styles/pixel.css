@@ -1,0 +1,351 @@
+/* ─────────────────────────────────────────────────────────
+   받아줘 — 8비트 핑크 픽셀 편지함 디자인 시스템.
+   main.jsx 에서 index.css 다음에 import 되어 paper 테마를 덮는다.
+   폰트: Galmuri (SIL OFL) — index.html 에서 CDN 로드.
+   ───────────────────────────────────────────────────────── */
+
+:root {
+  --px-bg: #FFF7F3;
+  --px-surface: #FFE1E8;
+  --px-pink: #F3A6B5;
+  --px-deep: #C96F7F;
+  --px-border: #9E5C64;
+  --px-text: #4A2F35;
+  --px-heart: #E45C7A;
+  --px-cream: #FFFDF8;
+  --px-font: 'Galmuri11', 'Galmuri9', 'Apple SD Gothic Neo', 'Malgun Gothic',
+    Pretendard, sans-serif;
+  --px-shadow: rgba(158, 92, 100, 0.28);
+}
+
+/* ── 배경: 크림 + 작은 픽셀 하트 패턴 (paper 테마 덮어쓰기) ── */
+body {
+  background: var(--px-bg);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56'><g fill='%23F3A6B5' opacity='0.16'><path d='M8 6h2v2H8zM12 6h2v2h-2zM6 8h2v2H6zM8 8h6v2H8zM14 8h2v2h-2zM8 10h6v2H8zM10 12h2v2h-2z'/></g><g fill='%23E45C7A' opacity='0.10'><path d='M36 32h2v2h-2zM40 32h2v2h-2zM34 34h2v2h-2zM36 34h6v2h-6zM42 34h2v2h-2zM36 36h6v2h-6zM38 38h2v2h-2z'/></g></svg>");
+  font-family: var(--px-font);
+  color: var(--px-text);
+  -webkit-font-smoothing: none;
+}
+/* 옛 종이 grain / 얼룩 레이어 제거 */
+body::before,
+body::after {
+  content: none;
+}
+
+img.pixelated,
+.pixelated img,
+.pixelated svg,
+svg.pixelated {
+  image-rendering: pixelated;
+}
+
+/* ── 레트로 윈도우 ───────────────────────────────────── */
+.px-window {
+  background: var(--px-cream);
+  border: 3px solid var(--px-border);
+  box-shadow: 6px 6px 0 var(--px-shadow);
+  position: relative;
+}
+.px-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--px-pink);
+  border-bottom: 3px solid var(--px-border);
+  padding: 8px 10px;
+  color: var(--px-text);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  user-select: none;
+}
+.px-titlebar-text {
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.px-titlebar-controls {
+  display: inline-flex;
+  gap: 4px;
+}
+.px-titlebar-controls i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--px-cream);
+  border: 2px solid var(--px-border);
+}
+.px-titlebar-heart {
+  color: var(--px-heart);
+  font-size: 12px;
+}
+.px-window-body {
+  padding: 18px 16px 20px;
+}
+
+/* ── 픽셀 버튼 ───────────────────────────────────────── */
+.px-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 16px;
+  font-family: var(--px-font);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--px-text);
+  background: var(--px-pink);
+  border: 3px solid var(--px-border);
+  box-shadow: 0 4px 0 var(--px-border);
+  cursor: pointer;
+  user-select: none;
+  transition: none;
+}
+.px-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--px-border);
+}
+.px-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--px-border);
+}
+.px-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 0 var(--px-border);
+}
+.px-btn-deep {
+  background: var(--px-deep);
+  color: var(--px-cream);
+}
+.px-btn-cream {
+  background: var(--px-cream);
+}
+.px-btn-surface {
+  background: var(--px-surface);
+}
+.px-btn-danger {
+  background: var(--px-cream);
+  color: #b0413e;
+  border-color: #b0413e;
+  box-shadow: 0 4px 0 #b0413e;
+}
+.px-btn-danger:hover {
+  box-shadow: 0 6px 0 #b0413e;
+}
+.px-btn-danger:active {
+  box-shadow: 0 1px 0 #b0413e;
+}
+.px-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  color: var(--px-deep);
+}
+.px-btn-ghost:hover,
+.px-btn-ghost:active {
+  transform: none;
+  box-shadow: none;
+}
+.px-btn-sm {
+  width: auto;
+  padding: 8px 12px;
+  font-size: 12px;
+  box-shadow: 0 3px 0 var(--px-border);
+}
+.px-btn-sm:hover {
+  box-shadow: 0 5px 0 var(--px-border);
+}
+.px-btn-sm:active {
+  box-shadow: 0 1px 0 var(--px-border);
+}
+
+/* ── 입력 ────────────────────────────────────────────── */
+.px-input,
+.px-textarea {
+  width: 100%;
+  background: var(--px-cream);
+  border: 3px solid var(--px-border);
+  box-shadow: inset 3px 3px 0 rgba(158, 92, 100, 0.10);
+  padding: 11px 12px;
+  font-family: var(--px-font);
+  font-size: 15px;
+  color: var(--px-text);
+}
+.px-input::placeholder,
+.px-textarea::placeholder {
+  color: var(--px-deep);
+  opacity: 0.55;
+}
+.px-input:focus,
+.px-textarea:focus {
+  border-color: var(--px-deep);
+  background: #fff;
+}
+.px-textarea {
+  resize: none;
+  line-height: 26px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 25px,
+    rgba(201, 111, 127, 0.18) 25px,
+    rgba(201, 111, 127, 0.18) 26px
+  );
+  background-position: 0 8px;
+  background-attachment: local;
+}
+.px-input:disabled,
+.px-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── 카드 / 라벨 / 구분선 ────────────────────────────── */
+.px-card {
+  background: var(--px-surface);
+  border: 3px solid var(--px-border);
+  box-shadow: 4px 4px 0 var(--px-shadow);
+}
+.px-card-cream {
+  background: var(--px-cream);
+}
+.px-label {
+  display: inline-block;
+  background: var(--px-surface);
+  border: 2px solid var(--px-border);
+  box-shadow: 2px 2px 0 var(--px-shadow);
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.px-hr {
+  border: none;
+  height: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--px-pink) 0 8px,
+    transparent 8px 16px
+  );
+  margin: 14px 0;
+}
+
+/* ── 토스트 ──────────────────────────────────────────── */
+.px-toast {
+  background: var(--px-surface);
+  border: 3px solid var(--px-border);
+  box-shadow: 4px 4px 0 var(--px-shadow);
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--px-text);
+}
+
+/* ── 라디오(보내는 사람 선택 등) ─────────────────────── */
+.px-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: var(--px-cream);
+  border: 3px solid var(--px-border);
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: var(--px-font);
+}
+.px-option[data-checked='true'] {
+  background: var(--px-surface);
+  box-shadow: inset 3px 3px 0 rgba(158, 92, 100, 0.14);
+}
+.px-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.px-option .px-dot {
+  flex-shrink: 0;
+  margin-top: 2px;
+  width: 12px;
+  height: 12px;
+  border: 3px solid var(--px-border);
+  background: transparent;
+}
+.px-option[data-checked='true'] .px-dot {
+  background: var(--px-heart);
+}
+
+/* ── 애니메이션 (8비트 — steps 기반, 부드러움 금지) ──── */
+@keyframes px-pop {
+  0% { transform: scale(0.82); }
+  60% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.px-pop {
+  animation: px-pop 0.2s steps(3) both;
+}
+
+@keyframes px-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.px-bob {
+  animation: px-bob 1.6s steps(2) infinite;
+}
+
+@keyframes px-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-2px) rotate(-2deg); }
+  75% { transform: translateX(2px) rotate(2deg); }
+}
+.px-shake {
+  animation: px-shake 0.4s steps(4);
+}
+.px-shake-hover:hover {
+  animation: px-shake 0.5s steps(4) infinite;
+}
+
+@keyframes px-float-heart {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-40px); opacity: 0; }
+}
+.px-float-heart {
+  animation: px-float-heart 0.9s steps(6) both;
+}
+
+/* 2프레임 토글 (고양이 꼬리 등) */
+@keyframes px-frame-a {
+  0%, 49.9% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes px-frame-b {
+  0%, 49.9% { opacity: 0; }
+  50%, 100% { opacity: 1; }
+}
+.px-frame-a { animation: px-frame-a 0.9s steps(1) infinite; }
+.px-frame-b { animation: px-frame-b 0.9s steps(1) infinite; }
+
+/* 눈 깜빡임 — 4.2초마다 짧게 */
+@keyframes px-blink {
+  0%, 94% { opacity: 0; }
+  95%, 100% { opacity: 1; }
+}
+.px-blink { animation: px-blink 4.2s steps(1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .px-pop, .px-bob, .px-shake, .px-shake-hover:hover,
+  .px-float-heart, .px-frame-a, .px-frame-b, .px-blink {
+    animation: none !important;
+  }
+  .px-frame-b { opacity: 0 !important; }
+  .px-blink { opacity: 0 !important; }
+  .px-btn:hover { transform: none; }
+}

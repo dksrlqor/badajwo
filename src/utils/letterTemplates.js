@@ -13,6 +13,21 @@
 
 export const LETTER_TEMPLATES = [
   {
+    id: 'pixel_letter',
+    name: '픽셀 편지',
+    category: 'default',
+    description: '8비트 픽셀 편지함 세계관의 기본 편지지',
+    mood: 'pixel, retro, pink',
+    supportsPhotos: true,
+    supportsMusic: true,
+    swatch: {
+      paper: '#FFFDF8',
+      accent: '#F3A6B5',
+      ink: '#4A2F35',
+      bg: '#FFF7F3'
+    }
+  },
+  {
     id: 'vintage_scrapbook',
     name: '빈티지 스크랩북',
     category: 'friend',
@@ -59,7 +74,7 @@ export const LETTER_TEMPLATES = [
   }
 ]
 
-export const DEFAULT_TEMPLATE_ID = 'vintage_scrapbook'
+export const DEFAULT_TEMPLATE_ID = 'pixel_letter'
 
 // 옛 ID 호환 — localStorage 에 남아 있는 v3 데이터를 새 컴포넌트로 라우팅.
 const LEGACY_ID_MAP = {

@@ -114,15 +114,25 @@ export default function App() {
         }
       />
 
-      {/* 간단 편지 링크 — letters / inbox 와 분리된 별도 흐름 */}
+      {/* 일회성 픽셀 편지 — letters / inbox 와 분리된 별도 흐름 */}
       <Route
-        path="/quick/new"
+        path="/one-letter"
         element={
           <Layout>
             <QuickNew />
           </Layout>
         }
       />
+      <Route
+        path="/l/:code"
+        element={
+          <RecipientLayout>
+            <QuickView />
+          </RecipientLayout>
+        }
+      />
+      {/* 옛 간단 링크 경로 호환 — 이미 공유된 /quick/:code 링크는 계속 열려야 함 */}
+      <Route path="/quick/new" element={<Navigate to="/one-letter" replace />} />
       <Route
         path="/quick/:code"
         element={

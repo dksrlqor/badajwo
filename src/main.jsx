@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import App from './App.jsx'
 import { AuthProvider, getGoogleClientId } from './context/AuthContext.jsx'
 import './index.css'
+import './styles/pixel.css'
 
 // Google OAuth client_id 는 .env.local 의 VITE_GOOGLE_CLIENT_ID 로 주입.
 // 미설정 시 GoogleOAuthProvider 는 빈 문자열로도 동작은 하지만 실제 버튼은 작동하지 않음 →

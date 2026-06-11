@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { getUserByUsername, validateUsername } from '../utils/storage'
-import MotionButton from '../components/MotionButton'
-import { OrnamentLine } from '../components/VintageMail'
+import PixelWindow from '../components/pixel/PixelWindow'
+import PixelButton from '../components/pixel/PixelButton'
+import PixelCat from '../components/pixel/PixelCat'
 
-// /write/id — 받는 사람 받아줘 아이디 입력 → /u/:username/write 이동.
-// receiver 는 URL 또는 검색 결과로만 결정한다 (로그인 사용자와 무관).
+// /write/id — 받는 사람 받아줘 아이디 입력 → /u/:username/write.
+// receiver 는 URL/검색 결과로만 결정 (로그인 사용자와 무관).
 export default function WriteId() {
   const navigate = useNavigate()
   const [raw, setRaw] = useState('')
@@ -29,118 +30,56 @@ export default function WriteId() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.4 }}
-      className="pt-6"
+      transition={{ duration: 0.3 }}
+      className="pt-2"
     >
-      <div className="flex items-center mb-6">
-        <button
-          onClick={() => navigate('/write')}
-          className="text-sm px-2 py-1 -ml-2"
-          style={{
-            color: '#5A4538',
-            textDecoration: 'underline dashed rgba(92,62,40,0.32)',
-            textUnderlineOffset: 4
-          }}
-        >
+      <div className="flex items-center mb-4">
+        <button onClick={() => navigate('/')} className="px-btn px-btn-ghost px-btn-sm" style={{ width: 'auto' }}>
           ← 뒤로
         </button>
       </div>
 
-      <div className="text-center mb-6">
-        <h1
-          className="text-[22px] font-bold"
-          style={{
-            color: '#3D2E22',
-            fontFamily: "'Apple SD Gothic Neo', Georgia, serif"
-          }}
-        >
-          누구에게 편지를 보낼까요?
-        </h1>
-        <div className="flex justify-center mt-2 mb-2">
-          <OrnamentLine width={120} color="#86705E" />
+      <PixelWindow title="♡ 누구에게 보낼까요? ♡">
+        <div className="flex justify-center mb-4">
+          <PixelCat state="idle" px={5} />
         </div>
-        <p className="text-[12px] leading-relaxed" style={{ color: '#86705E' }}>
-          상대방의 받아줘 아이디를 입력하면
+        <p className="text-[12px] text-center leading-relaxed mb-4" style={{ color: 'var(--px-deep)' }}>
+          친구의 받아줘 아이디를 입력하면
           <br />
-          그 사람에게 바로 편지를 보낼 수 있어요.
+          그 친구에게 바로 편지를 쓸 수 있어요.
         </p>
-      </div>
 
-      <motion.div
-        layout
-        className="paper-noise relative mx-1 mb-5"
-        style={{
-          background: '#FDF8EE',
-          padding: '28px 22px 22px',
-          borderRadius: '8px 6px 10px 7px',
-          boxShadow:
-            '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 5px rgba(92,62,40,0.10), 0 14px 32px rgba(92,62,40,0.12)',
-          transform: 'rotate(-0.5deg)'
-        }}
-      >
-        <div
-          aria-hidden
-          className="masking-tape tape-orange"
-          style={{
-            width: 86,
-            height: 18,
-            top: -9,
-            left: '50%',
-            transform: 'translateX(-50%) rotate(-2deg)'
-          }}
-        />
-
-        <div
-          className="text-[11px] mb-2"
-          style={{ color: '#5A4538', letterSpacing: '0.18em' }}
-        >
-          받는 사람 아이디
-        </div>
-        <div className="flex items-baseline gap-1.5">
-          <span
-            className="text-[22px] font-bold"
-            style={{ color: '#86705E', fontFamily: 'Georgia, serif' }}
-          >
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[20px] font-bold" style={{ color: 'var(--px-deep)' }}>
             @
           </span>
           <input
-            className="paper-input flex-1"
+            className="px-input flex-1"
             value={raw}
-            onChange={(e) => {
-              setRaw(e.target.value.toLowerCase())
-              setError('')
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') go()
-            }}
-            placeholder="예: paperstar"
+            onChange={(e) => setRaw(e.target.value.toLowerCase())}
+            placeholder="친구의 아이디"
             maxLength={20}
-            autoFocus
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck="false"
-            inputMode="text"
-            style={{ fontSize: 20, fontFamily: 'Georgia, serif' }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') go()
+            }}
           />
         </div>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-[11px] mt-3"
-            style={{ color: '#C7443E' }}
-          >
-            {error}
-          </motion.p>
-        )}
-      </motion.div>
 
-      <MotionButton variant="primary" onClick={go} disabled={!raw}>
-        편지 쓰러 가기
-      </MotionButton>
+        {error && (
+          <div className="text-[12px] text-center mb-3" style={{ color: '#b0413e' }}>
+            {error}
+          </div>
+        )}
+
+        <PixelButton variant="deep" onClick={go}>
+          편지 쓰러 가기
+        </PixelButton>
+      </PixelWindow>
     </motion.div>
   )
 }

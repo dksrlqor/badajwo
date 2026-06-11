@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import MotionButton from '../components/MotionButton'
 import Toast from '../components/Toast'
-import { OrnamentLine } from '../components/VintageMail'
+import PixelWindow from '../components/pixel/PixelWindow'
+import PixelButton from '../components/pixel/PixelButton'
+import PixelCat from '../components/pixel/PixelCat'
 import {
   validateUsername,
   isUsernameAvailable,
@@ -12,17 +13,15 @@ import {
   PLACEHOLDER_USERNAMES
 } from '../utils/storage'
 
-// 받아줘 — 첫 로그인 후 username 정하기.
-// 핵심: placeholder / 추천 / 예시 어디에도 user.displayName / email / googleSub 가 새지 않는다.
-// 모든 예시는 PLACEHOLDER_USERNAMES + suggestRandomUsername() 만 사용.
+// 첫 로그인 후 username 정하기.
+// 핵심 불변: placeholder/추천/예시 어디에도 사용자 개인정보(displayName/email)가 새지 않는다.
 export default function Onboarding() {
   const navigate = useNavigate()
   const { user, setUsername, status, signOut } = useAuth()
   const [raw, setRaw] = useState('')
   const [error, setError] = useState('')
-  const [available, setAvailable] = useState(null) // null|true|false
+  const [available, setAvailable] = useState(null)
   const [toast, setToast] = useState({ message: '', show: false })
-  // placeholder 는 입력하지 않은 동안 회전. 절대 사용자 정보 미참조.
   const [placeholderIdx, setPlaceholderIdx] = useState(() =>
     Math.floor(Math.random() * PLACEHOLDER_USERNAMES.length)
   )
@@ -51,8 +50,6 @@ export default function Onboarding() {
   }, [raw])
 
   const placeholder = PLACEHOLDER_USERNAMES[placeholderIdx]
-
-  // 미리보기에 표시할 username — validated 가 아니어도 raw 그대로 보여주되 lowercase 만 적용.
   const previewName = useMemo(() => {
     if (!raw) return '아이디'
     const v = validateUsername(raw)
@@ -70,94 +67,42 @@ export default function Onboarding() {
       setError(res.reason || '아이디를 만들지 못했어요.')
       return
     }
-    setToast({ message: `@${v.normalized} 으로 시작할게요.`, show: true })
+    setToast({ message: `@${v.normalized} 으로 시작할게요 ♡`, show: true })
     setTimeout(() => {
       setToast({ message: '', show: false })
       navigate('/me', { replace: true })
     }, 900)
   }
 
-  const onSuggest = () => {
-    // 사용자 정보 0 — 순수 단어 조합으로만 생성
-    const s = suggestRandomUsername()
-    setRaw(s)
-  }
-
   if (!user) return null
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.4 }}
-      className="pt-6"
+      transition={{ duration: 0.3 }}
+      className="pt-2"
     >
-      <div className="text-center mb-6">
-        <h1
-          className="text-[22px] font-bold"
-          style={{
-            color: '#3D2E22',
-            fontFamily: "'Apple SD Gothic Neo', Georgia, serif"
-          }}
-        >
-          나만의 편지 주소를 만들어주세요
-        </h1>
-        <div className="flex justify-center mt-2 mb-2">
-          <OrnamentLine width={120} color="#86705E" />
+      <PixelWindow title="♡ 내 편지 주소 만들기 ♡">
+        <div className="flex justify-center mb-3">
+          <PixelCat state="idle" px={5} />
         </div>
-        <p className="text-[12px] leading-relaxed" style={{ color: '#86705E' }}>
-          이 아이디는 사람들이 당신에게 편지를 보낼 때 사용하는 주소가 돼요.
+        <p className="text-[12px] text-center leading-relaxed mb-4" style={{ color: 'var(--px-deep)' }}>
+          이 아이디는 사람들이 당신에게
           <br />
-          주소 예시: takemyletter.site/u/
-          <AnimatePresence mode="wait">
-            <motion.b
-              key={previewName}
-              initial={{ opacity: 0, y: 3 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -3 }}
-              transition={{ duration: 0.25 }}
-              style={{ color: '#3D2E22', display: 'inline-block' }}
-            >
-              {previewName}
-            </motion.b>
-          </AnimatePresence>
+          편지를 보낼 때 쓰는 주소가 돼요.
+          <br />
+          <span style={{ color: 'var(--px-text)' }}>
+            takemyletter.site/u/<b>{previewName}</b>
+          </span>
         </p>
-      </div>
 
-      {/* 종이 카드 — 입력 + 추천 */}
-      <div
-        className="paper-noise relative mx-1 mb-5"
-        style={{
-          background: '#FDF8EE',
-          padding: '28px 22px 24px',
-          borderRadius: '8px 6px 10px 7px',
-          boxShadow:
-            '0 1px 0 rgba(255,255,255,0.6) inset, 0 2px 5px rgba(92,62,40,0.10), 0 14px 32px rgba(92,62,40,0.12)',
-          transform: 'rotate(-0.5deg)'
-        }}
-      >
-        <div
-          aria-hidden
-          className="masking-tape tape-sage"
-          style={{
-            width: 90,
-            height: 18,
-            top: -9,
-            left: '50%',
-            transform: 'translateX(-50%) rotate(-2deg)'
-          }}
-        />
-
-        <div className="flex items-baseline gap-1.5">
-          <span
-            className="text-[24px] font-bold"
-            style={{ color: '#86705E', fontFamily: 'Georgia, serif' }}
-          >
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[20px] font-bold" style={{ color: 'var(--px-deep)' }}>
             @
           </span>
           <input
-            className="paper-input flex-1"
+            className="px-input flex-1"
             value={raw}
             onChange={(e) => setRaw(e.target.value.toLowerCase())}
             placeholder={`예: ${placeholder}`}
@@ -166,81 +111,47 @@ export default function Onboarding() {
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck="false"
-            inputMode="text"
-            style={{ fontSize: 22, fontFamily: 'Georgia, serif' }}
           />
         </div>
 
-        <div className="flex items-center justify-between mt-3 gap-2">
-          <p className="text-[11px] leading-relaxed" style={{ color: '#86705E' }}>
-            영어 소문자와 숫자만 / 3~20자 / 중복 불가
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <p className="text-[11px]" style={{ color: 'var(--px-deep)' }}>
+            영어 소문자·숫자 / 3~20자 / 중복 불가
           </p>
-          <button
-            type="button"
-            onClick={onSuggest}
-            className="paper-tab text-[11px]"
-            style={{ padding: '6px 10px' }}
-          >
-            🎲 추천 받기
-          </button>
+          <PixelButton variant="cream" size="sm" onClick={() => setRaw(suggestRandomUsername())}>
+            🎲 추천
+          </PixelButton>
         </div>
 
-        <AnimatePresence>
-          {raw && available === true && (
-            <motion.p
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-[11px] mt-2"
-              style={{ color: '#7A9272' }}
-            >
-              ✓ 사용 가능한 아이디예요.
-            </motion.p>
-          )}
-          {raw && available === false && (
-            <motion.p
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-[11px] mt-2"
-              style={{ color: '#C7443E' }}
-            >
-              이미 사용 중인 아이디예요.
-            </motion.p>
-          )}
-          {error && (
-            <motion.p
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-[11px] mt-2"
-              style={{ color: '#C7443E' }}
-            >
-              {error}
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
+        {raw && available === true && (
+          <p className="text-[11px] mb-2" style={{ color: '#5f8a5f' }}>
+            ✓ 사용 가능한 아이디예요.
+          </p>
+        )}
+        {raw && available === false && (
+          <p className="text-[11px] mb-2" style={{ color: '#b0413e' }}>
+            이미 사용 중인 아이디예요.
+          </p>
+        )}
+        {error && (
+          <p className="text-[11px] mb-2" style={{ color: '#b0413e' }}>
+            {error}
+          </p>
+        )}
 
-      <div className="space-y-3">
-        <MotionButton
-          variant="primary"
-          onClick={onSubmit}
-          disabled={!raw || available === false}
-        >
-          아이디 만들기
-        </MotionButton>
-        <MotionButton variant="ghost" onClick={signOut}>
-          로그아웃
-        </MotionButton>
-      </div>
+        <div className="space-y-3 mt-3">
+          <PixelButton variant="deep" onClick={onSubmit} disabled={!raw || available === false}>
+            ♥ 아이디 만들기
+          </PixelButton>
+          <PixelButton variant="ghost" onClick={signOut}>
+            로그아웃
+          </PixelButton>
+        </div>
 
-      <p
-        className="text-[11px] text-center mt-6 leading-relaxed"
-        style={{ color: '#86705E' }}
-      >
-        예시는 무작위로 생성된 단어이며 당신의 Google 이름·이메일과 무관해요.
-      </p>
+        <p className="mt-3 text-[10px] text-center leading-relaxed" style={{ color: 'var(--px-deep)' }}>
+          예시는 무작위 단어이며 당신의 Google 이름·이메일과 무관해요.
+        </p>
+      </PixelWindow>
 
       <Toast message={toast.message} show={toast.show} />
     </motion.div>
