@@ -1,0 +1,22 @@
+name: Supabase keepalive
+
+# 무료 티어는 7일간 DB 요청이 없으면 자동 일시정지된다.
+# 매일 한 번 가벼운 REST 조회를 날려 활동을 기록 → 일시정지 방지.
+# 프로젝트가 이미 일시정지 상태면 ping 은 실패하지만 워크플로우는 성공 처리 (수동 Resume 필요).
+
+on:
+  schedule:
+    - cron: '17 3 * * *' # 매일 03:17 UTC = 12:17 KST
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST
+        run: |
+          curl -sS --max-time 20 \
+            -H "apikey: ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            "${{ secrets.VITE_SUPABASE_URL }}/rest/v1/simple_letters?select=id&limit=1" \
+            || echo "ping failed — project paused? (non-fatal)"
