@@ -13,6 +13,7 @@ import QuickNew from './pages/QuickNew'
 import QuickView from './pages/QuickView'
 import LetterDetail from './pages/LetterDetail'
 import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
 
 // 받아줘 — 라우트 구조 (v3)
 //
@@ -78,14 +79,9 @@ export default function App() {
           </Layout>
         }
       />
-      <Route
-        path="/privacy"
-        element={
-          <Layout>
-            <Privacy />
-          </Layout>
-        }
-      />
+      {/* 정책 문서 — 픽셀 Layout(480px) 대신 DocPage 자체 760px 컬럼 사용 */}
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
 
       <Route
         path="/me"

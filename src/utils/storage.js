@@ -9,7 +9,8 @@ import {
   hasSupabase,
   SIMPLE_LETTERS_TABLE,
   LETTER_PHOTOS_BUCKET,
-  RPC_INCREMENT_VIEW
+  RPC_INCREMENT_VIEW,
+  RPC_SIMPLE_LETTER_STATUS
 } from './supabase'
 
 const USERS_KEY     = 'badajwo:users'        // { [id]: user }
@@ -645,6 +646,16 @@ const SIMPLE_NAME_MAX = 30
 const SIMPLE_CONTENT_MAX = 4000
 const SIMPLE_PHOTO_MAX = 5
 
+// 일회성 편지 유효 시간 — 생성 후 24시간.
+// 진짜 만료 강제는 Supabase 쪽(RLS + before-insert trigger, supabase/init.sql)이
+// 담당한다. 여기 값은 localStorage fallback 과, 마이그레이션 전 DB 를 위한
+// 클라이언트 측 이중 방어 + UI 표시용.
+const SIMPLE_LETTER_TTL_MS = 24 * 60 * 60 * 1000
+
+function isSimpleLetterExpired(letter, now = Date.now()) {
+  return !!(letter && letter.expiresAt && letter.expiresAt <= now)
+}
+
 function genSimpleLetterCode() {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
   let out = ''
@@ -757,7 +768,7 @@ function createSimpleLetterLocal(data, createdByUserId) {
     music: data.music,
     createdByUserId: createdByUserId || null,
     createdAt: Date.now(),
-    expiresAt: null,
+    expiresAt: Date.now() + SIMPLE_LETTER_TTL_MS,
     viewCount: 0,
     isDeleted: false
   }
@@ -776,8 +787,20 @@ function getSimpleLetterByCodeLocal(code) {
   if (!id) return null
   const letters = readJSON(SIMPLE_LETTERS_KEY, {})
   const l = letters[id]
-  if (!l || l.isDeleted) return null
+  if (!l || l.isDeleted || isSimpleLetterExpired(l)) return null
   return l
+}
+
+function getSimpleLetterStatusLocal(code) {
+  if (!code) return { status: 'not_found', letter: null }
+  const map = readJSON(SIMPLE_CODE_KEY, {})
+  const id = map[String(code).toLowerCase()]
+  if (!id) return { status: 'not_found', letter: null }
+  const l = readJSON(SIMPLE_LETTERS_KEY, {})[id]
+  if (!l) return { status: 'not_found', letter: null }
+  if (l.isDeleted) return { status: 'deleted', letter: null }
+  if (isSimpleLetterExpired(l)) return { status: 'expired', letter: null }
+  return { status: 'ok', letter: l }
 }
 
 function incrementSimpleLetterViewLocal(code) {
@@ -817,7 +840,8 @@ export async function createSimpleLetter(rawInput, { createdByUserId = null } = 
     )
     const photos = uploadedPhotos.filter(Boolean)
 
-    // 3) insert
+    // 3) insert — expires_at 은 서버 trigger 가 now()+24h 로 다시 강제하지만,
+    //    trigger 적용 전 DB 에서도 만료가 동작하도록 클라이언트에서도 보낸다.
     const row = {
       code,
       type: 'simple_shared_letter',
@@ -828,7 +852,8 @@ export async function createSimpleLetter(rawInput, { createdByUserId = null } = 
       template_id: data.templateId,
       photos,
       music: data.music,
-      created_by_user_id: createdByUserId || null
+      created_by_user_id: createdByUserId || null,
+      expires_at: new Date(Date.now() + SIMPLE_LETTER_TTL_MS).toISOString()
     }
     const { data: inserted, error } = await supabase
       .from(SIMPLE_LETTERS_TABLE)
@@ -847,8 +872,18 @@ export async function createSimpleLetter(rawInput, { createdByUserId = null } = 
 }
 
 export async function getSimpleLetterByCode(code) {
-  if (!code) return null
-  if (!hasSupabase) return getSimpleLetterByCodeLocal(code)
+  const { letter } = await getSimpleLetterWithStatus(code)
+  return letter
+}
+
+// 일회성 편지 열람용 — 편지와 함께 왜 못 보는지(만료/삭제/없음)를 구분해 준다.
+//   { status: 'ok' | 'expired' | 'deleted' | 'not_found', letter }
+// 만료 강제는 DB 가 기준: RLS 가 만료된 row 의 select 자체를 막고, 상태 구분은
+// content 를 내려주지 않는 get_simple_letter_status RPC 로만 확인한다.
+// (RPC/RLS 마이그레이션 전 DB 에서도 expiresAt 클라이언트 검사로 이중 방어.)
+export async function getSimpleLetterWithStatus(code) {
+  if (!code) return { status: 'not_found', letter: null }
+  if (!hasSupabase) return getSimpleLetterStatusLocal(code)
 
   const { data, error } = await supabase
     .from(SIMPLE_LETTERS_TABLE)
@@ -857,11 +892,25 @@ export async function getSimpleLetterByCode(code) {
     .eq('is_deleted', false)
     .maybeSingle()
 
-  if (error) {
-    console.warn('[badajwo] simple_letters select error', error)
-    return null
+  if (!error && data) {
+    const letter = rowToSimpleLetter(data)
+    if (isSimpleLetterExpired(letter)) return { status: 'expired', letter: null }
+    return { status: 'ok', letter }
   }
-  return rowToSimpleLetter(data)
+  if (error) console.warn('[badajwo] simple_letters fetch error', error)
+
+  try {
+    const { data: status, error: rpcError } = await supabase.rpc(
+      RPC_SIMPLE_LETTER_STATUS,
+      { p_code: String(code).toLowerCase() }
+    )
+    if (!rpcError && (status === 'expired' || status === 'deleted')) {
+      return { status, letter: null }
+    }
+  } catch {
+    // RPC 가 아직 없는(마이그레이션 전) DB — not_found 로 떨어뜨린다.
+  }
+  return { status: 'not_found', letter: null }
 }
 
 export async function incrementSimpleLetterView(code) {

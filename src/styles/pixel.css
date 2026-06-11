@@ -32,6 +32,23 @@ body::after {
   content: none;
 }
 
+/* ── 모바일 안정성 가드 ─────────────────────────────────
+   320px 폭에서도 완료 문구·토스트·창이 화면 밖으로 나가지 않게.
+   한글은 keep-all 로 단어 단위 줄바꿈, 긴 URL 은 anywhere 로 강제 줄바꿈. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+body {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.px-break-url {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
 img.pixelated,
 .pixelated img,
 .pixelated svg,
@@ -45,6 +62,8 @@ svg.pixelated {
   border: 3px solid var(--px-border);
   box-shadow: 6px 6px 0 var(--px-shadow);
   position: relative;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .px-titlebar {
   display: flex;
@@ -83,6 +102,13 @@ svg.pixelated {
 }
 .px-window-body {
   padding: 18px 16px 20px;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+@media (max-width: 360px) {
+  .px-window-body {
+    padding: 16px 12px 18px;
+  }
 }
 
 /* ── 픽셀 버튼 ───────────────────────────────────────── */
@@ -248,6 +274,11 @@ svg.pixelated {
   font-weight: 700;
   text-align: center;
   color: var(--px-text);
+  box-sizing: border-box;
+  width: 100%;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* ── 라디오(보내는 사람 선택 등) ─────────────────────── */
@@ -340,12 +371,59 @@ svg.pixelated {
 }
 .px-blink { animation: px-blink 4.2s steps(1) infinite; }
 
+/* 고양이 쓰다듬기 — 1~2px 단위 8비트 점프 */
+@keyframes px-cat-jump {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-2px); }
+  60% { transform: translateY(-1px); }
+}
+.px-cat-jump {
+  animation: px-cat-jump 0.45s steps(3);
+}
+.px-pet-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.px-pet-btn:focus-visible {
+  outline: 3px solid var(--px-deep);
+  outline-offset: 4px;
+}
+
+/* ── footer ─────────────────────────────────────────── */
+.px-footer {
+  border-top: 4px solid transparent;
+  border-image: repeating-linear-gradient(
+      90deg,
+      var(--px-pink) 0 8px,
+      transparent 8px 16px
+    )
+    4;
+  background: var(--px-surface);
+}
+.px-footer a {
+  color: var(--px-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  display: inline-block;
+}
+.px-footer a:hover {
+  transform: translateY(-1px);
+  color: var(--px-heart);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .px-pop, .px-bob, .px-shake, .px-shake-hover:hover,
-  .px-float-heart, .px-frame-a, .px-frame-b, .px-blink {
+  .px-float-heart, .px-frame-a, .px-frame-b, .px-blink,
+  .px-cat-jump {
     animation: none !important;
   }
   .px-frame-b { opacity: 0 !important; }
   .px-blink { opacity: 0 !important; }
   .px-btn:hover { transform: none; }
+  .px-footer a:hover { transform: none; }
 }

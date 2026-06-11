@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import {
-  getSimpleLetterByCode,
+  getSimpleLetterWithStatus,
   incrementSimpleLetterView
 } from '../utils/storage'
 import { useAuth } from '../context/AuthContext'
@@ -16,6 +16,36 @@ import HeartBurst from '../components/pixel/HeartBurst'
 // /l/:code (+ 옛 /quick/:code 호환) — 일회성 픽셀 편지 열람.
 // 봉투 클릭 → 흔들림 + 하트 + 플랩 열림 → 편지 내용.
 // ?preview=1 — 봉투 단계 스킵 (작성자 미리보기).
+//
+// 만료(24시간)·삭제·없음은 DB 기준 status 로 구분해 각각 다른 안내 화면을 보여준다.
+// 만료된 편지는 봉투/내용이 절대 열리지 않는다 (content 는 서버에서 내려오지도 않음).
+
+function NoticeScreen({ visual, title, lines, children }) {
+  return (
+    <div className="pt-12 text-center">
+      <PixelWindow title="♡ 받아줘 ♡">
+        <div className="flex flex-col items-center py-4">
+          {visual}
+          <h1 className="mt-4 text-[15px] font-bold" style={{ color: 'var(--px-text)' }}>
+            {title}
+          </h1>
+          <p
+            className="mt-1 mb-5 text-[12px] leading-relaxed"
+            style={{ color: 'var(--px-deep)' }}
+          >
+            {lines.map((line, i) => (
+              <span key={i}>
+                {i > 0 && <br />}
+                {line}
+              </span>
+            ))}
+          </p>
+          <div className="w-full space-y-3">{children}</div>
+        </div>
+      </PixelWindow>
+    </div>
+  )
+}
 
 export default function QuickView() {
   const { code } = useParams()
@@ -27,7 +57,7 @@ export default function QuickView() {
     new URLSearchParams(location.search).get('preview') === '1'
 
   const [letter, setLetter] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = useState('loading') // loading | ok | expired | deleted | not_found
   // phase: envelope → opening → content
   const [phase, setPhase] = useState(previewMode ? 'content' : 'envelope')
   const [burst, setBurst] = useState(0)
@@ -38,12 +68,12 @@ export default function QuickView() {
 
   useEffect(() => {
     let mounted = true
-    setLoading(true)
-    getSimpleLetterByCode(code).then((l) => {
+    setStatus('loading')
+    getSimpleLetterWithStatus(code).then(({ status: s, letter: l }) => {
       if (!mounted) return
       setLetter(l)
-      setLoading(false)
-      if (!l || previewMode) return
+      setStatus(s)
+      if (s !== 'ok' || !l || previewMode) return
       if (user && user.id === l.createdByUserId) return
       incrementSimpleLetterView(code)
     })
@@ -73,7 +103,7 @@ export default function QuickView() {
     window.setTimeout(() => setPhase('content'), 950)
   }
 
-  if (loading) {
+  if (status === 'loading') {
     return (
       <div className="pt-16 text-center">
         <div className="inline-block px-bob" aria-hidden>
@@ -86,26 +116,67 @@ export default function QuickView() {
     )
   }
 
-  if (!letter) {
+  if (status === 'expired') {
     return (
-      <div className="pt-12 text-center">
-        <PixelWindow title="♡ 받아줘 ♡">
-          <div className="flex flex-col items-center py-4">
-            <PixelCat state="tilt" px={6} animate={false} />
-            <h1 className="mt-4 text-[15px] font-bold" style={{ color: 'var(--px-text)' }}>
-              이 편지를 찾을 수 없어요.
-            </h1>
-            <p className="mt-1 mb-5 text-[12px] leading-relaxed" style={{ color: 'var(--px-deep)' }}>
-              링크가 만료되었거나 잘못된 주소일 수 있어요.
-              <br />
-              보낸 사람에게 다시 확인해보세요.
-            </p>
-            <PixelButton variant="cream" onClick={() => navigate('/')}>
-              홈으로
-            </PixelButton>
+      <NoticeScreen
+        visual={
+          <div className="flex flex-col items-center" aria-hidden>
+            <PixelEnvelope px={6} />
+            <div className="mt-3">
+              <PixelCat state="tilt" px={5} animate={false} />
+            </div>
           </div>
-        </PixelWindow>
-      </div>
+        }
+        title="이 편지는 24시간이 지나 만료되었어요."
+        lines={[
+          '일회성 편지는 만들어진 후 24시간 동안만 열 수 있어요.',
+          '다시 받고 싶다면 새 편지 링크를 만들어달라고 해주세요.'
+        ]}
+      >
+        <PixelButton variant="deep" onClick={() => navigate('/one-letter')}>
+          새 편지 만들기
+        </PixelButton>
+        <PixelButton variant="cream" onClick={() => navigate('/login')}>
+          내 편지함 만들기
+        </PixelButton>
+        <PixelButton variant="ghost" onClick={() => navigate('/')}>
+          처음으로 돌아가기
+        </PixelButton>
+      </NoticeScreen>
+    )
+  }
+
+  if (status === 'deleted') {
+    return (
+      <NoticeScreen
+        visual={<PixelCat state="tilt" px={6} animate={false} />}
+        title="삭제된 편지예요."
+        lines={['보낸 사람이 이 편지를 거두어 갔어요.']}
+      >
+        <PixelButton variant="deep" onClick={() => navigate('/one-letter')}>
+          새 편지 만들기
+        </PixelButton>
+        <PixelButton variant="ghost" onClick={() => navigate('/')}>
+          처음으로 돌아가기
+        </PixelButton>
+      </NoticeScreen>
+    )
+  }
+
+  if (status !== 'ok' || !letter) {
+    return (
+      <NoticeScreen
+        visual={<PixelCat state="tilt" px={6} animate={false} />}
+        title="존재하지 않는 편지예요."
+        lines={['주소가 잘못되었을 수 있어요.', '보낸 사람에게 다시 확인해보세요.']}
+      >
+        <PixelButton variant="deep" onClick={() => navigate('/one-letter')}>
+          새 편지 만들기
+        </PixelButton>
+        <PixelButton variant="ghost" onClick={() => navigate('/')}>
+          처음으로 돌아가기
+        </PixelButton>
+      </NoticeScreen>
     )
   }
 
@@ -176,8 +247,10 @@ export default function QuickView() {
               color: 'var(--px-deep)'
             }}
           >
-            이 편지는 받아줘에서 만들어진 일회성 픽셀 편지예요. 같은 링크로 다시 열어볼
-            수 있어요.
+            이 편지는 받아줘에서 만들어진 일회성 픽셀 편지예요.{' '}
+            {letter.expiresAt
+              ? '만들어진 후 24시간 동안만 같은 링크로 열어볼 수 있어요.'
+              : '같은 링크로 다시 열어볼 수 있어요.'}
             {isOwner && ' · 당신이 만든 편지예요.'}
           </div>
 

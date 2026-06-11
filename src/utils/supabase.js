@@ -35,3 +35,4 @@ export const hasSupabase = !!client
 export const SIMPLE_LETTERS_TABLE = 'simple_letters'
 export const LETTER_PHOTOS_BUCKET = 'letter-photos'
 export const RPC_INCREMENT_VIEW = 'increment_letter_view'
+export const RPC_SIMPLE_LETTER_STATUS = 'get_simple_letter_status'

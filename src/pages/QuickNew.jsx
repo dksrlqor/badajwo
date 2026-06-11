@@ -148,6 +148,8 @@ export default function QuickNew() {
           >
             편지 하나를 만들어 전용 링크로 보내요.
             <br />
+            전용 링크는 24시간 동안만 열 수 있어요.
+            <br />
             받은 편지함과는 연결되지 않는 한 통이에요.
           </p>
 
@@ -489,15 +491,20 @@ function DoneStep({ letter, onAgain, showToast }) {
           <PixelCat state="heart-hug" px={6} />
           <HeartBurst trigger={burst} />
         </div>
-        <h2 className="mt-4 text-[16px] font-bold" style={{ color: 'var(--px-text)' }}>
+        <h2
+          className="mt-4 text-[16px] font-bold leading-relaxed"
+          style={{ color: 'var(--px-text)' }}
+        >
           고양이가 편지를 봉투에 넣었어요 ♡
         </h2>
-        <p className="mt-1 text-[12px]" style={{ color: 'var(--px-deep)' }}>
-          이 링크를 복사해서 보내주세요.
+        <p className="mt-1 text-[12px] leading-relaxed" style={{ color: 'var(--px-deep)' }}>
+          이 편지는 24시간 동안만 열 수 있어요.
+          <br />
+          링크를 복사해서 상대에게 보내주세요.
         </p>
 
         <div
-          className="w-full mt-4 px-3 py-3 text-[12px] break-all select-all"
+          className="w-full mt-4 px-3 py-3 text-[12px] px-break-url select-all"
           onClick={(e) => {
             const range = document.createRange()
             range.selectNodeContents(e.currentTarget)
@@ -533,7 +540,7 @@ function DoneStep({ letter, onAgain, showToast }) {
         </div>
 
         <p className="mt-4 text-[11px] leading-relaxed" style={{ color: 'var(--px-deep)' }}>
-          링크를 아는 사람만 이 편지를 볼 수 있어요.
+          링크를 아는 사람만 이 편지를 볼 수 있고, 만든 지 24시간이 지나면 만료돼요.
           {user?.username && (
             <>
               {' '}
