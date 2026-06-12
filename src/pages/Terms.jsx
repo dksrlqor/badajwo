@@ -1,14 +1,15 @@
 import DocPage, { DocSection } from '../components/DocPage'
+import { SNS_LINKS } from '../config/site'
 
-// 이용약관 — MVP 초안.
-// 실제 배포 전 운영 주체·문의처·관할 법원 등 확정 정보로 갱신 필요.
+// 이용약관 — 정식 버전 (2026-06-13 확정).
+// 운영 방식이 바뀌면 본문과 시행일을 함께 갱신할 것. 문의는 인스타그램 DM.
 
 export default function Terms() {
   return (
     <DocPage
       title="이용약관"
       intro="이 약관은 받아줘 서비스를 이용할 때 사용자와 운영자 사이에 적용되는 기본 규칙을 정합니다."
-      updatedAt="시행일 2026년 6월 12일 (MVP 초안 — 정식 운영 전 갱신될 수 있습니다)"
+      updatedAt="시행일 2026년 6월 13일"
     >
       <DocSection title="1. 서비스 소개">
         <p>
@@ -62,9 +63,9 @@ export default function Terms() {
 
       <DocSection title="6. 서비스 변경과 중단">
         <p>
-          받아줘는 MVP(시험 운영) 단계로, 기능이 수시로 추가·변경될 수 있습니다.
-          운영상·기술상 필요한 경우 서비스의 전부 또는 일부가 변경되거나 중단될 수
-          있으며, 중요한 변경은 서비스 내 공지로 안내합니다.
+          받아줘는 기능이 계속 추가·개선되는 서비스로, 업데이트에 따라 화면과 기능이
+          바뀔 수 있습니다. 운영상·기술상 필요한 경우 서비스의 전부 또는 일부가
+          변경되거나 중단될 수 있으며, 중요한 변경은 서비스 내 공지로 안내합니다.
         </p>
       </DocSection>
 
@@ -75,8 +76,8 @@ export default function Terms() {
             진실성·적법성에 대해 보증하지 않습니다.
           </li>
           <li>
-            무료로 제공되는 시험 운영 기간 동안 데이터 유실·서비스 장애에 대해
-            법령이 허용하는 범위에서 책임이 제한됩니다.
+            무료로 제공되는 서비스 특성상 데이터 유실·서비스 장애에 대해 법령이
+            허용하는 범위에서 책임이 제한됩니다.
           </li>
           <li>만료·삭제된 편지는 복구할 수 없습니다.</li>
         </ul>
@@ -90,10 +91,24 @@ export default function Terms() {
       </DocSection>
 
       <DocSection title="9. 문의">
-        <p>
-          서비스 이용에 관한 문의는 추후 공지되는 문의 채널을 통해 받습니다. 문의
-          채널이 마련되기 전까지는 개인정보 처리방침 페이지의 안내를 참고해 주세요.
+        <p className="mb-2">
+          서비스 이용에 관한 문의는 아래 인스타그램 DM 으로 보내주세요. 페이지 하단
+          footer 에서도 같은 링크를 찾을 수 있습니다.
         </p>
+        <ul className="list-disc pl-5">
+          {SNS_LINKS.map((l) => (
+            <li key={l.href}>
+              <a
+                href={l.href}
+                target="_blank"
+                rel="noreferrer noopener"
+                style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}
+              >
+                {l.label}
+              </a>
+            </li>
+          ))}
+        </ul>
       </DocSection>
     </DocPage>
   )

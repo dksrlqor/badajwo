@@ -1,7 +1,8 @@
 import DocPage, { DocSection } from '../components/DocPage'
+import { SNS_LINKS } from '../config/site'
 
-// 개인정보 처리방침 — MVP 초안.
-// 실제 배포 전 운영자 이메일/위탁 업체명/시행일 수정 필요.
+// 개인정보 처리방침 — 정식 버전 (2026-06-13 확정).
+// 운영 방식이 바뀌면 본문과 개정일을 함께 갱신할 것. 문의는 인스타그램 DM.
 // 디자인 원칙: 픽셀 폰트·장식 없이 일반 문서처럼 읽기 쉽게 (DocPage).
 
 export default function Privacy() {
@@ -9,7 +10,7 @@ export default function Privacy() {
     <DocPage
       title="개인정보 처리방침"
       intro="받아줘는 사용자의 편지, 프로필, 계정 정보를 소중히 다룹니다. 이 문서는 받아줘가 어떤 정보를 수집하고, 왜 사용하며, 어떻게 보호하는지 설명합니다."
-      updatedAt="시행일 2026년 6월 1일 · 최근 개정 2026년 6월 12일 (MVP 초안 — 정식 운영 전 갱신될 수 있습니다)"
+      updatedAt="시행일 2026년 6월 1일 · 최종 개정 2026년 6월 13일"
     >
       <DocSection title="1. 수집하는 개인정보">
         <p className="mb-2">
@@ -115,7 +116,7 @@ export default function Privacy() {
           <li>
             일회성 편지(전용 링크 편지): 작성 후 24시간 동안만 열람할 수 있으며,
             만료된 편지는 링크로 더 이상 열람할 수 없습니다. 만료된 편지 데이터는
-            주기적으로 정리됩니다.
+            운영 과정에서 순차적으로 삭제될 수 있습니다.
           </li>
         </ul>
         <p>
@@ -203,6 +204,27 @@ export default function Privacy() {
           있습니다. 처리방침이 변경되는 경우 서비스 내 공지 또는 개인정보 처리방침
           페이지를 통해 안내합니다.
         </p>
+      </DocSection>
+
+      <DocSection title="12. 문의">
+        <p className="mb-2">
+          개인정보에 관한 문의(열람·수정·삭제 요청 포함)는 아래 인스타그램 DM 으로
+          보내주세요. 확인 후 빠르게 답변드립니다.
+        </p>
+        <ul className="list-disc pl-5">
+          {SNS_LINKS.map((l) => (
+            <li key={l.href}>
+              <a
+                href={l.href}
+                target="_blank"
+                rel="noreferrer noopener"
+                style={{ textDecoration: 'underline', textUnderlineOffset: 3 }}
+              >
+                {l.label}
+              </a>
+            </li>
+          ))}
+        </ul>
       </DocSection>
     </DocPage>
   )

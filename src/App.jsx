@@ -14,6 +14,7 @@ import QuickView from './pages/QuickView'
 import LetterDetail from './pages/LetterDetail'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import NotFound from './pages/NotFound'
 
 // 받아줘 — 라우트 구조 (v3)
 //
@@ -160,12 +161,7 @@ export default function App() {
         path="*"
         element={
           <Layout>
-            <div
-              className="pt-20 text-center text-[13px]"
-              style={{ color: '#86705E' }}
-            >
-              앗, 이 편지지는 찾을 수 없어요.
-            </div>
+            <NotFound />
           </Layout>
         }
       />

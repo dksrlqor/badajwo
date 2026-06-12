@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -12,13 +12,27 @@ import PixelButton from '../components/pixel/PixelButton'
 import PixelCat from '../components/pixel/PixelCat'
 import PixelEnvelope from '../components/pixel/PixelEnvelope'
 import HeartBurst from '../components/pixel/HeartBurst'
+import MailCat from '../components/pixel/MailCat'
 
 // /l/:code (+ 옛 /quick/:code 호환) — 일회성 픽셀 편지 열람.
-// 봉투 클릭 → 흔들림 + 하트 + 플랩 열림 → 편지 내용.
-// ?preview=1 — 봉투 단계 스킵 (작성자 미리보기).
+//
+// 오픈 인터랙션: 편지를 입에 문 배달 고양이를 3번 톡톡 → 터치마다 표정이
+// 점점 웃상으로 변하고(하트 이펙트), 3번째에 편지를 건네주며 봉투가
+// 픽셀스럽게 열린 뒤 본문으로 이어진다. 편지를 받기 전의 작은 의식.
+// ?preview=1 — 고양이/봉투 단계 스킵 (작성자 미리보기).
 //
 // 만료(24시간)·삭제·없음은 DB 기준 status 로 구분해 각각 다른 안내 화면을 보여준다.
 // 만료된 편지는 봉투/내용이 절대 열리지 않는다 (content 는 서버에서 내려오지도 않음).
+
+const TAPS_TO_OPEN = 3
+const TAP_COOLDOWN_MS = 260
+
+const TAP_CAPTIONS = [
+  '고양이를 톡톡 눌러 편지를 열어보세요',
+  '한 번 더! 고양이가 기분이 좋아지고 있어요',
+  '마지막 한 번! 곧 편지를 건네줄 거예요',
+  '편지를 건네주고 있어요...'
+]
 
 function NoticeScreen({ visual, title, lines, children }) {
   return (
@@ -58,13 +72,21 @@ export default function QuickView() {
 
   const [letter, setLetter] = useState(null)
   const [status, setStatus] = useState('loading') // loading | ok | expired | deleted | not_found
-  // phase: envelope → opening → content
-  const [phase, setPhase] = useState(previewMode ? 'content' : 'envelope')
+  // phase: cat (탭 0~3) → opening (봉투 펼침) → content
+  const [phase, setPhase] = useState(previewMode ? 'content' : 'cat')
+  const [taps, setTaps] = useState(0)
   const [burst, setBurst] = useState(0)
+  const lastTap = useRef(0)
+  const timers = useRef([])
   const reduceMotion =
     typeof window !== 'undefined' &&
     window.matchMedia &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  useEffect(() => {
+    const t = timers.current
+    return () => t.forEach((id) => window.clearTimeout(id))
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -92,15 +114,30 @@ export default function QuickView() {
     }
   }, [])
 
-  const openEnvelope = () => {
-    if (phase !== 'envelope') return
-    setBurst(Date.now())
+  const onCatTap = () => {
+    if (phase !== 'cat' || taps >= TAPS_TO_OPEN) return
+    const now = Date.now()
+    if (now - lastTap.current < TAP_COOLDOWN_MS) return
+    lastTap.current = now
+
+    const next = taps + 1
+    setTaps(next)
+    setBurst(now) // 탭마다 작은 하트 — 단계가 오를수록 표정과 함께 보상감
+
+    if (next < TAPS_TO_OPEN) return
+
+    // 3번째 탭 — 활짝 웃으며 편지를 건네준 뒤 봉투가 열린다.
     if (reduceMotion) {
-      setPhase('content')
+      timers.current.push(window.setTimeout(() => setPhase('content'), 250))
       return
     }
-    setPhase('opening')
-    window.setTimeout(() => setPhase('content'), 950)
+    timers.current.push(
+      window.setTimeout(() => {
+        setPhase('opening')
+        setBurst(Date.now())
+        timers.current.push(window.setTimeout(() => setPhase('content'), 950))
+      }, 700)
+    )
   }
 
   if (status === 'loading') {
@@ -195,38 +232,70 @@ export default function QuickView() {
         </div>
       )}
 
-      {(phase === 'envelope' || phase === 'opening') && (
+      {phase === 'cat' && (
+        <div className="pt-8 text-center">
+          <h1 className="text-[18px] font-bold mb-1" style={{ color: 'var(--px-heart)' }}>
+            ♡ Letter For You ♡
+          </h1>
+          <p className="text-[12px] mb-6" style={{ color: 'var(--px-deep)' }}>
+            고양이가 편지를 배달하러 왔어요
+          </p>
+
+          <button
+            type="button"
+            onClick={onCatTap}
+            aria-label={`고양이를 눌러 편지 받기 — ${Math.min(taps, TAPS_TO_OPEN)} / ${TAPS_TO_OPEN}`}
+            className="px-pet-btn"
+            style={{ position: 'relative', display: 'inline-block' }}
+          >
+            {/* key 로 탭마다 점프 모션 재생 */}
+            <span key={taps} className={taps > 0 ? 'px-cat-jump' : ''} style={{ display: 'inline-block' }}>
+              <MailCat stage={taps} px={10} animate={!reduceMotion} />
+            </span>
+            <HeartBurst trigger={burst} px={taps >= 2 ? 5 : 4} />
+          </button>
+
+          <div className="mt-5 flex justify-center" aria-hidden>
+            <span className="px-tap-hearts">
+              {Array.from({ length: TAPS_TO_OPEN }, (_, i) => (
+                <i key={i} data-on={taps > i}>
+                  {taps > i ? '♥' : '♡'}
+                </i>
+              ))}
+            </span>
+          </div>
+
+          <p
+            className="mt-3 text-[12px] leading-relaxed"
+            style={{ color: 'var(--px-deep)' }}
+            role="status"
+            aria-live="polite"
+          >
+            {TAP_CAPTIONS[Math.min(taps, TAPS_TO_OPEN)]}
+          </p>
+        </div>
+      )}
+
+      {phase === 'opening' && (
         <div className="pt-8 text-center">
           <h1 className="text-[18px] font-bold mb-1" style={{ color: 'var(--px-heart)' }}>
             ♡ Letter For You ♡
           </h1>
           <p className="text-[12px] mb-8" style={{ color: 'var(--px-deep)' }}>
-            편지를 열어보세요
+            고양이가 편지를 건네줬어요
           </p>
 
-          <button
-            type="button"
-            onClick={openEnvelope}
-            aria-label="편지 열기"
-            className={phase === 'envelope' ? 'px-shake-hover' : 'px-shake'}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: phase === 'envelope' ? 'pointer' : 'wait',
-              position: 'relative',
-              display: 'inline-block'
-            }}
-          >
-            <PixelEnvelope open={phase === 'opening'} px={8} />
+          <div className="px-pop" style={{ position: 'relative', display: 'inline-block' }}>
+            <PixelEnvelope open px={8} />
             <HeartBurst trigger={burst} px={5} />
-          </button>
+          </div>
 
           <div className="mt-6 flex justify-center">
-            <PixelCat state={phase === 'opening' ? 'heart-hug' : 'wait'} px={5} />
+            <PixelCat state="heart-hug" px={5} />
           </div>
 
           <p className="mt-4 text-[11px]" style={{ color: 'var(--px-deep)' }}>
-            {phase === 'opening' ? '편지를 펼치는 중...' : 'click to open'}
+            편지를 펼치는 중...
           </p>
         </div>
       )}

@@ -380,6 +380,34 @@ svg.pixelated {
 .px-cat-jump {
   animation: px-cat-jump 0.45s steps(3);
 }
+
+/* 배달 고양이가 편지를 건네는 모션 — 봉투만 2px 단위로 앞(아래)으로 나옴 */
+@keyframes px-handover {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+  100% { transform: translateY(6px); }
+}
+.px-handover {
+  animation: px-handover 0.5s steps(2) forwards;
+}
+
+/* 편지 오픈 진행 하트 (♡♡♡ → ♥♥♥) */
+.px-tap-hearts {
+  display: inline-flex;
+  gap: 10px;
+  font-size: 18px;
+  line-height: 1;
+  user-select: none;
+}
+.px-tap-hearts i {
+  font-style: normal;
+  color: var(--px-deep);
+  opacity: 0.35;
+}
+.px-tap-hearts i[data-on='true'] {
+  color: var(--px-heart);
+  opacity: 1;
+}
 .px-pet-btn {
   background: transparent;
   border: none;
@@ -419,7 +447,7 @@ svg.pixelated {
 @media (prefers-reduced-motion: reduce) {
   .px-pop, .px-bob, .px-shake, .px-shake-hover:hover,
   .px-float-heart, .px-frame-a, .px-frame-b, .px-blink,
-  .px-cat-jump {
+  .px-cat-jump, .px-handover {
     animation: none !important;
   }
   .px-frame-b { opacity: 0 !important; }
