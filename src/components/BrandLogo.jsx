@@ -6,7 +6,7 @@ import { BRAND, LOGO_SRC } from '../config/site'
 // 원본 로고가 흰색이라 어두운 딥핑크 칩 위에 올린다.
 export default function BrandLogo({ size = 'md' }) {
   const [imgOk, setImgOk] = useState(true)
-  const imgH = size === 'sm' ? 16 : 22
+  const imgH = size === 'sm' ? 26 : 42
   const fontSize = size === 'sm' ? 12 : 14
 
   if (imgOk) {

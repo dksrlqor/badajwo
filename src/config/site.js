@@ -11,10 +11,11 @@ export const BRAND = {
 // (파일이 없으면 텍스트 로고로 fallback)
 export const LOGO_SRC = 'lunervia-logo.png'
 
+// 문의는 인스타그램 DM 으로 받는다 — 기업/개인 채널 구분.
 export const SNS_LINKS = [
-  { label: 'Instagram @lunerviasoft', href: 'https://www.instagram.com/lunerviasoft' },
-  { label: 'Instagram @dksrlqor', href: 'https://www.instagram.com/dksrlqor' }
+  { label: '기업 문의 · Instagram @lunerviasoft', href: 'https://www.instagram.com/lunerviasoft' },
+  { label: '개인 문의 · Instagram @dksrlqor', href: 'https://www.instagram.com/dksrlqor' }
   // TikTok 등 새 SNS 는 여기에 { label, href } 로 추가
 ]
 
-export const CONTACT_EMAIL = '' // TODO: 운영 문의 메일 주소
+export const CONTACT_EMAIL = '' // 이메일 문의는 사용하지 않음 (인스타 DM 로 받음)
