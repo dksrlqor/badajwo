@@ -3,19 +3,15 @@ import { motion } from 'framer-motion'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { useAuth, hasGoogleClientId } from '../context/AuthContext'
-import Toast from '../components/Toast'
 import PixelWindow from '../components/pixel/PixelWindow'
-import PixelButton from '../components/pixel/PixelButton'
 import PixelCat from '../components/pixel/PixelCat'
 
 // 받아줘 — Google 로그인. 로그인 후 username 있으면 /me, 없으면 /onboarding.
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { signInWithGoogleCredential, signInMock } = useAuth()
+  const { signInWithGoogleCredential } = useAuth()
   const [error, setError] = useState('')
-  const [toast, setToast] = useState({ message: '', show: false })
-  const [devKey, setDevKey] = useState('')
   const hasClient = hasGoogleClientId()
 
   const next = new URLSearchParams(location.search).get('next') || ''
@@ -36,22 +32,6 @@ export default function Login() {
       setError(res.reason || '로그인에 실패했어요.')
       return
     }
-    afterLogin(res.user)
-  }
-
-  const onMockLogin = () => {
-    const k = devKey.trim().toLowerCase()
-    if (!k) {
-      setError('테스트용 키를 적어주세요.')
-      return
-    }
-    const res = signInMock(k, k)
-    if (!res.ok) {
-      setError(res.reason || '테스트 로그인에 실패했어요.')
-      return
-    }
-    setToast({ message: '테스트 계정으로 들어왔어요.', show: true })
-    setTimeout(() => setToast({ message: '', show: false }), 1500)
     afterLogin(res.user)
   }
 
@@ -118,33 +98,6 @@ export default function Login() {
         </div>
       </PixelWindow>
 
-      <details className="mt-4 text-[11px]" style={{ color: 'var(--px-deep)' }}>
-        <summary className="cursor-pointer select-none">
-          OAuth client_id 가 아직 없을 때 → 테스트 모드
-        </summary>
-        <div
-          className="mt-2 p-3"
-          style={{ background: 'var(--px-cream)', border: '2px solid var(--px-border)' }}
-        >
-          <p className="mb-2">
-            임의의 키를 적고 로그인하면 그 키 기준의 가짜 계정이 만들어져요. 로컬 개발
-            전용.
-          </p>
-          <div className="flex gap-2">
-            <input
-              className="px-input flex-1"
-              value={devKey}
-              onChange={(e) => setDevKey(e.target.value)}
-              placeholder="예: tester"
-              maxLength={20}
-            />
-            <PixelButton variant="cream" size="sm" onClick={onMockLogin}>
-              테스트 로그인
-            </PixelButton>
-          </div>
-        </div>
-      </details>
-
       <p className="mt-5 text-[11px] text-center leading-relaxed" style={{ color: 'var(--px-deep)' }}>
         로그인하면 Google 계정 식별값, 이메일, 이름, 프로필 사진을 받아 받아줘 계정을
         만들어요.
@@ -153,8 +106,6 @@ export default function Login() {
           개인정보 처리방침
         </Link>
       </p>
-
-      <Toast message={toast.message} show={toast.show} />
     </motion.div>
   )
 }

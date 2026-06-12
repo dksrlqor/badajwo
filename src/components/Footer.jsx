@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import BrandLogo from './BrandLogo'
-import { BRAND, SITE_LINKS } from '../config/site'
+import { BRAND, SNS_LINKS, CONTACT_EMAIL } from '../config/site'
 
 // 받아줘 공통 footer.
 //   variant="full"    메인·작성 등 일반 페이지 — 로고/소개 + 링크 정리
@@ -38,10 +38,7 @@ export default function Footer({ variant = 'full' }) {
     )
   }
 
-  const snsLinks = [
-    SITE_LINKS.instagram && { label: 'Instagram', href: SITE_LINKS.instagram },
-    SITE_LINKS.tiktok && { label: 'TikTok', href: SITE_LINKS.tiktok }
-  ].filter(Boolean)
+  const snsLinks = SNS_LINKS.filter((l) => l && l.href)
 
   return (
     <footer className="px-footer mt-12 px-5 py-6">
@@ -66,11 +63,9 @@ export default function Footer({ variant = 'full' }) {
                 <FooterLink href={l.href}>{l.label}</FooterLink>
               </li>
             ))}
-            {SITE_LINKS.contactEmail && (
+            {CONTACT_EMAIL && (
               <li>
-                <FooterLink href={`mailto:${SITE_LINKS.contactEmail}`}>
-                  문의하기
-                </FooterLink>
+                <FooterLink href={`mailto:${CONTACT_EMAIL}`}>문의하기</FooterLink>
               </li>
             )}
             <li>
