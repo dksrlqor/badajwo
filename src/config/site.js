@@ -19,3 +19,11 @@ export const SNS_LINKS = [
 ]
 
 export const CONTACT_EMAIL = '' // 이메일 문의는 사용하지 않음 (인스타 DM 로 받음)
+
+// 사업자 정보 — footer 하단에 한 줄로 표기. 빈 항목은 자동으로 숨겨진다.
+// (상호/대표자명은 사업자등록증 표기 그대로 유지할 것)
+export const BUSINESS = {
+  company: '루네르비아',          // 상호 (등록증 표기 — 한글)
+  owner: '안기백',                // 대표자
+  registrationNo: '283-42-01448'  // 사업자 등록번호
+}
