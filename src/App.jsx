@@ -1,4 +1,5 @@
-import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { Routes, Route, useLocation, useParams, Navigate } from 'react-router-dom'
+import { validateUsername } from './utils/storage'
 import Layout from './components/Layout'
 import RecipientLayout from './components/RecipientLayout'
 import Home from './pages/Home'
@@ -157,6 +158,11 @@ export default function App() {
       <Route path="/create/letter" element={<Navigate to="/write" replace />} />
       <Route path="/create/diary" element={<Navigate to="/write" replace />} />
 
+      {/* /u 가 빠진 단일 세그먼트 링크(/redhong)는 /u/redhong 으로 보정.
+          예약어/형식 위반은 NotFound. 위의 정적 라우트(/me·/login 등)는
+          RRv6 specificity 상 이 동적 라우트보다 우선 매칭되므로 안전. */}
+      <Route path="/:maybeUsername" element={<BareUsernameRedirect />} />
+
       <Route
         path="*"
         element={
@@ -166,5 +172,16 @@ export default function App() {
         }
       />
     </Routes>
+  )
+}
+
+function BareUsernameRedirect() {
+  const { maybeUsername } = useParams()
+  const v = validateUsername(maybeUsername)
+  if (v.ok) return <Navigate to={`/u/${v.normalized}`} replace />
+  return (
+    <Layout>
+      <NotFound />
+    </Layout>
   )
 }

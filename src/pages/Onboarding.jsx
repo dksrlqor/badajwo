@@ -8,7 +8,7 @@ import PixelButton from '../components/pixel/PixelButton'
 import PixelCat from '../components/pixel/PixelCat'
 import {
   validateUsername,
-  isUsernameAvailable,
+  isUsernameAvailableRemote,
   suggestRandomUsername,
   PLACEHOLDER_USERNAMES
 } from '../utils/storage'
@@ -46,7 +46,14 @@ export default function Onboarding() {
       setAvailable(null)
       return
     }
-    setAvailable(isUsernameAvailable(v.normalized))
+    let cancelled = false
+    setAvailable('checking')
+    isUsernameAvailableRemote(v.normalized).then((a) => {
+      if (!cancelled) setAvailable(a) // true | false | null(조회실패)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [raw])
 
   const placeholder = PLACEHOLDER_USERNAMES[placeholderIdx]
@@ -56,14 +63,20 @@ export default function Onboarding() {
     return v.ok ? v.normalized : raw.toLowerCase()
   }, [raw])
 
-  const onSubmit = () => {
+  const [saving, setSaving] = useState(false)
+
+  const onSubmit = async () => {
+    if (saving) return
     const v = validateUsername(raw)
     if (!v.ok) {
       setError(v.reason)
       return
     }
-    const res = setUsername(v.normalized)
+    setSaving(true)
+    setError('')
+    const res = await setUsername(v.normalized)
     if (!res.ok) {
+      setSaving(false)
       setError(res.reason || '아이디를 만들지 못했어요.')
       return
     }
@@ -123,6 +136,11 @@ export default function Onboarding() {
           </PixelButton>
         </div>
 
+        {raw && available === 'checking' && (
+          <p className="text-[11px] mb-2" style={{ color: 'var(--px-deep)' }}>
+            아이디 확인 중...
+          </p>
+        )}
         {raw && available === true && (
           <p className="text-[11px] mb-2" style={{ color: '#5f8a5f' }}>
             ✓ 사용 가능한 아이디예요.
@@ -140,8 +158,12 @@ export default function Onboarding() {
         )}
 
         <div className="space-y-3 mt-3">
-          <PixelButton variant="deep" onClick={onSubmit} disabled={!raw || available === false}>
-            ♥ 아이디 만들기
+          <PixelButton
+            variant="deep"
+            onClick={onSubmit}
+            disabled={!raw || available === false || available === 'checking' || saving}
+          >
+            {saving ? '만드는 중...' : '♥ 아이디 만들기'}
           </PixelButton>
           <PixelButton variant="ghost" onClick={signOut}>
             로그아웃

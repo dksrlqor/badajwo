@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getUserByUsername, saveLetter } from '../utils/storage'
+import { getPublicProfile, sendLetterRemote, normalizeUsername } from '../utils/storage'
 import Toast from '../components/Toast'
 import ProfileAvatar from '../components/ProfileAvatar'
 import PixelWindow from '../components/pixel/PixelWindow'
@@ -22,8 +22,10 @@ export default function UserWrite({ readOnly = false } = {}) {
   const location = useLocation()
   const { user: currentUser } = useAuth()
 
-  // 받는 사람 = URL username. 절대 currentUser 가 아님.
-  const receiver = useMemo(() => getUserByUsername(username), [username])
+  const display = normalizeUsername(username)
+  // 받는 사람 = URL username 조회 결과. 절대 currentUser 가 아님.
+  const [receiver, setReceiver] = useState(null)
+  const [status, setStatus] = useState('loading') // loading | found | notfound | error
 
   const [body, setBody] = useState('')
   const [senderMode, setSenderMode] = useState('anonymous')
@@ -34,11 +36,69 @@ export default function UserWrite({ readOnly = false } = {}) {
   const [sent, setSent] = useState(null)
   const [burst, setBurst] = useState(0)
 
+  useEffect(() => {
+    let cancelled = false
+    setStatus('loading')
+    setReceiver(null)
+    getPublicProfile(username)
+      .then((r) => {
+        if (cancelled) return
+        if (r) {
+          setReceiver(r)
+          setStatus('found')
+        } else {
+          setStatus('notfound')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [username])
+
   const isOwnLink = currentUser && receiver && currentUser.id === receiver.id
   const previewMode =
     readOnly || new URLSearchParams(location.search).get('preview') === '1'
 
-  if (!receiver) {
+  if (status === 'loading') {
+    return (
+      <div className="pt-12 text-center">
+        <PixelWindow title="♡ 받아줘 ♡">
+          <div className="flex flex-col items-center py-4">
+            <PixelCat state="wait" px={6} />
+            <p className="mt-4 text-[13px]" style={{ color: 'var(--px-deep)' }}>
+              편지함을 불러오는 중...
+            </p>
+          </div>
+        </PixelWindow>
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="pt-12 text-center">
+        <PixelWindow title="♡ 받아줘 ♡">
+          <div className="flex flex-col items-center py-4">
+            <PixelCat state="tilt" px={6} animate={false} />
+            <h1 className="mt-4 text-[15px] font-bold" style={{ color: 'var(--px-text)' }}>
+              잠시 연결이 어려워요.
+            </h1>
+            <p className="mt-1 mb-5 text-[12px]" style={{ color: 'var(--px-deep)' }}>
+              네트워크 상태를 확인하고 다시 시도해주세요.
+            </p>
+            <PixelButton variant="deep" onClick={() => window.location.reload()}>
+              다시 시도
+            </PixelButton>
+          </div>
+        </PixelWindow>
+      </div>
+    )
+  }
+
+  if (status === 'notfound' || !receiver) {
     return (
       <div className="pt-12 text-center">
         <PixelWindow title="♡ 받아줘 ♡">
@@ -48,7 +108,7 @@ export default function UserWrite({ readOnly = false } = {}) {
               이 편지함을 찾을 수 없어요.
             </h1>
             <p className="mt-1 mb-5 text-[12px]" style={{ color: 'var(--px-deep)' }}>
-              아이디를 다시 확인해주세요. /u/{username}
+              아이디를 다시 확인해주세요. /u/{display}
             </p>
             <PixelButton variant="cream" onClick={() => navigate('/write/id')}>
               다른 아이디로 찾아보기
@@ -64,7 +124,8 @@ export default function UserWrite({ readOnly = false } = {}) {
     window.setTimeout(() => setToast({ message: '', show: false }), 2200)
   }
 
-  const submit = () => {
+  const submit = async () => {
+    if (sending) return
     if (previewMode) {
       showToast('미리보기에서는 편지를 보낼 수 없어요.')
       return
@@ -101,11 +162,14 @@ export default function UserWrite({ readOnly = false } = {}) {
       input.senderUsername = currentUser.username
     }
 
-    // 고양이 배달 모션 — 짧게 보여주고 저장
+    // 고양이 배달 모션 — 전송과 최소 0.9s 모션을 함께 기다린다.
     setSending(true)
     setError('')
-    window.setTimeout(() => {
-      const letter = saveLetter(input)
+    try {
+      const [letter] = await Promise.all([
+        sendLetterRemote(input),
+        new Promise((r) => window.setTimeout(r, 900))
+      ])
       setSending(false)
       if (!letter) {
         setError('편지를 보내지 못했어요. 잠시 후 다시 시도해주세요.')
@@ -113,7 +177,10 @@ export default function UserWrite({ readOnly = false } = {}) {
       }
       setSent(letter)
       setBurst(Date.now())
-    }, 900)
+    } catch {
+      setSending(false)
+      setError('편지를 보내지 못했어요. 잠시 후 다시 시도해주세요.')
+    }
   }
 
   // ── 배달 중 ──

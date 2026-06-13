@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { listInboxFor, listArchiveFor, listPublicFor, presentSender } from '../utils/storage'
+import { listInbox, presentSender } from '../utils/storage'
 import Toast from '../components/Toast'
 import ProfileAvatar from '../components/ProfileAvatar'
 import PixelWindow from '../components/pixel/PixelWindow'
@@ -36,9 +36,34 @@ export default function Me() {
     [user?.username]
   )
 
-  const inbox = useMemo(() => (user ? listInboxFor(user.id) : []), [user])
-  const archive = useMemo(() => (user ? listArchiveFor(user.id) : []), [user])
-  const publicLetters = useMemo(() => (user ? listPublicFor(user.id) : []), [user])
+  const [inbox, setInbox] = useState([])
+  const [archive, setArchive] = useState([])
+  const [publicLetters, setPublicLetters] = useState([])
+  const [lettersLoading, setLettersLoading] = useState(true)
+
+  useEffect(() => {
+    if (!user?.username) return
+    let cancelled = false
+    setLettersLoading(true)
+    Promise.all([
+      listInbox(user, 'inbox'),
+      listInbox(user, 'public'),
+      listInbox(user, 'archive')
+    ])
+      .then(([i, p, a]) => {
+        if (cancelled) return
+        setInbox(i)
+        setPublicLetters(p)
+        setArchive(a)
+        setLettersLoading(false)
+      })
+      .catch(() => {
+        if (!cancelled) setLettersLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, user?.username])
 
   const showToast = (message) => {
     setToast({ message, show: true })
@@ -187,7 +212,18 @@ export default function Me() {
       </div>
 
       {/* 편지 목록 — 픽셀 봉투 카드 */}
-      {tabData.length === 0 ? (
+      {lettersLoading ? (
+        <div
+          className="px-4 py-8 text-center text-[12px]"
+          style={{
+            color: 'var(--px-deep)',
+            background: 'var(--px-cream)',
+            border: '3px dashed var(--px-border)'
+          }}
+        >
+          편지함을 불러오는 중...
+        </div>
+      ) : tabData.length === 0 ? (
         <div
           className="px-4 py-8 text-center text-[12px] leading-relaxed"
           style={{
@@ -221,8 +257,8 @@ export default function Me() {
         onConfirm={() => {
           if (deleteStage !== 'confirming') return
           setDeleteStage('deleting')
-          window.setTimeout(() => {
-            const res = deleteAccount()
+          window.setTimeout(async () => {
+            const res = await deleteAccount()
             if (!res?.ok) {
               showToast(res?.reason || '삭제하지 못했어요. 잠시 후 다시 시도해주세요.')
               setDeleteStage('closed')

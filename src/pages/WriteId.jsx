@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { getUserByUsername, validateUsername } from '../utils/storage'
+import { getPublicProfile, validateUsername } from '../utils/storage'
 import PixelWindow from '../components/pixel/PixelWindow'
 import PixelButton from '../components/pixel/PixelButton'
 import PixelCat from '../components/pixel/PixelCat'
@@ -12,20 +12,29 @@ export default function WriteId() {
   const navigate = useNavigate()
   const [raw, setRaw] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const go = () => {
+  const go = async () => {
+    if (busy) return
     setError('')
     const v = validateUsername(raw)
     if (!v.ok) {
       setError(v.reason)
       return
     }
-    const u = getUserByUsername(v.normalized)
-    if (!u) {
-      setError('존재하지 않는 아이디예요. 아이디를 다시 확인해주세요.')
-      return
+    setBusy(true)
+    try {
+      const u = await getPublicProfile(v.normalized)
+      if (!u) {
+        setError('존재하지 않는 아이디예요. 아이디를 다시 확인해주세요.')
+        return
+      }
+      navigate('/u/' + v.normalized + '/write')
+    } catch {
+      setError('아이디를 확인하는 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setBusy(false)
     }
-    navigate('/u/' + v.normalized + '/write')
   }
 
   return (
@@ -76,8 +85,8 @@ export default function WriteId() {
           </div>
         )}
 
-        <PixelButton variant="deep" onClick={go}>
-          편지 쓰러 가기
+        <PixelButton variant="deep" onClick={go} disabled={busy}>
+          {busy ? '확인 중...' : '편지 쓰러 가기'}
         </PixelButton>
       </PixelWindow>
     </motion.div>

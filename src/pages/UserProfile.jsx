@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
-import { getUserByUsername } from '../utils/storage'
+import { getPublicProfile, normalizeUsername } from '../utils/storage'
 import ProfileAvatar from '../components/ProfileAvatar'
 import PixelWindow from '../components/pixel/PixelWindow'
 import PixelButton from '../components/pixel/PixelButton'
@@ -10,16 +10,81 @@ import PixelCat from '../components/pixel/PixelCat'
 // /u/:username — 공개 편지함 입구.
 // 규칙(절대 불변): URL 의 username 이 곧 receiver. 로그인 사용자와 무관.
 // /me 의 미리보기는 ?preview=1.
+//
+// 조회 상태를 loading/found/notfound/error 로 분리한다 — 예전엔 동기 조회라
+// 데이터가 도착하기 전에 곧장 "편지함 없음" 을 띄웠고, Supabase 전환 후엔 그게
+// 반드시 깜빡임/오진단을 만든다.
 export default function UserProfile() {
   const { username } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
 
-  const receiver = useMemo(() => getUserByUsername(username), [username])
+  const display = normalizeUsername(username)
+  const [status, setStatus] = useState('loading') // loading | found | notfound | error
+  const [receiver, setReceiver] = useState(null)
+
   const previewMode =
     new URLSearchParams(location.search).get('preview') === '1'
 
-  if (!receiver) {
+  useEffect(() => {
+    let cancelled = false
+    setStatus('loading')
+    setReceiver(null)
+    getPublicProfile(username)
+      .then((r) => {
+        if (cancelled) return
+        if (r) {
+          setReceiver(r)
+          setStatus('found')
+        } else {
+          setStatus('notfound')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [username])
+
+  if (status === 'loading') {
+    return (
+      <div className="pt-12 text-center">
+        <PixelWindow title="♡ 받아줘 ♡">
+          <div className="flex flex-col items-center py-4">
+            <PixelCat state="wait" px={6} />
+            <p className="mt-4 text-[13px]" style={{ color: 'var(--px-deep)' }}>
+              편지함을 불러오는 중...
+            </p>
+          </div>
+        </PixelWindow>
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="pt-12 text-center">
+        <PixelWindow title="♡ 받아줘 ♡">
+          <div className="flex flex-col items-center py-4">
+            <PixelCat state="tilt" px={6} animate={false} />
+            <h1 className="mt-4 text-[15px] font-bold" style={{ color: 'var(--px-text)' }}>
+              잠시 연결이 어려워요.
+            </h1>
+            <p className="mt-1 mb-5 text-[12px]" style={{ color: 'var(--px-deep)' }}>
+              네트워크 상태를 확인하고 다시 시도해주세요.
+            </p>
+            <PixelButton variant="deep" onClick={() => window.location.reload()}>
+              다시 시도
+            </PixelButton>
+          </div>
+        </PixelWindow>
+      </div>
+    )
+  }
+
+  if (status === 'notfound' || !receiver) {
     return (
       <div className="pt-12 text-center">
         <PixelWindow title="♡ 받아줘 ♡">
@@ -29,7 +94,7 @@ export default function UserProfile() {
               이 편지함을 찾을 수 없어요.
             </h1>
             <p className="mt-1 mb-5 text-[12px]" style={{ color: 'var(--px-deep)' }}>
-              아이디를 다시 확인해주세요. /u/{username}
+              아이디를 다시 확인해주세요. /u/{display}
             </p>
             <PixelButton variant="cream" onClick={() => navigate('/write/id')}>
               다른 아이디로 찾아보기

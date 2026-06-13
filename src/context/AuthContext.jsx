@@ -3,13 +3,14 @@ import {
   loadCurrentUser,
   setSession,
   clearSession,
-  findOrCreateGoogleUser,
   findOrCreateMockUser,
-  setUsername as storeSetUsername,
   updateUserProfile,
   getUser,
-  deleteAccount as storeDeleteAccount
+  upsertGoogleProfile,
+  setUsernameRemote,
+  deleteAccountRemote
 } from '../utils/storage'
+import { hasSupabase } from '../utils/supabase'
 
 const AuthContext = createContext(null)
 
@@ -46,18 +47,20 @@ export function AuthProvider({ children }) {
     : 'authed'
 
   // Google credential (JWT) 로그인 — @react-oauth/google 의 GoogleLogin 컴포넌트가 콜백으로 전달.
-  const signInWithGoogleCredential = useCallback((credential) => {
+  // Supabase 에 프로필을 upsert 하고(google_sub 기준) 토큰 포함 user 를 받아온다 →
+  // 다른 기기에서 로그인해도 같은 계정/받은편지함으로 이어진다.
+  const signInWithGoogleCredential = useCallback(async (credential) => {
     const payload = decodeJwt(credential)
     if (!payload || !payload.sub) {
       return { ok: false, reason: '구글 로그인 정보를 읽지 못했어요.' }
     }
-    const u = findOrCreateGoogleUser({
+    const u = await upsertGoogleProfile({
       googleSub: payload.sub,
       email: payload.email || '',
       displayName: payload.name || payload.given_name || '',
       profileImage: payload.picture || ''
     })
-    if (!u) return { ok: false, reason: '계정 생성에 실패했어요.' }
+    if (!u) return { ok: false, reason: '계정 생성에 실패했어요. 잠시 후 다시 시도해주세요.' }
     setSession(u.id)
     setUser(u)
     return { ok: true, user: u }
@@ -77,9 +80,9 @@ export function AuthProvider({ children }) {
   }, [])
 
   const setUsername = useCallback(
-    (rawUsername) => {
+    async (rawUsername) => {
       if (!user) return { ok: false, reason: '로그인이 필요해요.' }
-      const res = storeSetUsername(user.id, rawUsername)
+      const res = await setUsernameRemote(user, rawUsername)
       if (res.ok) setUser(res.user)
       return res
     },
@@ -101,14 +104,24 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
-  // 영구 계정 삭제. localStorage 의 본인 데이터 + cascade 까지 일괄 처리.
-  // 백엔드 이전 시에도 같은 시그니처로 서버 호출만 추가하면 됨.
-  const deleteAccount = useCallback(() => {
+  // 영구 계정 삭제. Supabase 프로필/받은편지 삭제 + 보낸편지 익명화, 로컬 흔적 정리.
+  const deleteAccount = useCallback(async () => {
     if (!user) return { ok: false, reason: '로그인이 필요해요.' }
-    const res = storeDeleteAccount(user.id)
+    const res = await deleteAccountRemote(user)
     if (res.ok) setUser(null)
     return res
   }, [user])
+
+  // 마이그레이션 가드 — Supabase 백엔드 전환 전에 localStorage 로만 만들어진
+  // 옛 세션은 inboxToken 이 없다. 그대로 두면 받은편지함이 빈 채로 보이고
+  // /u/:username 도 서버에 없으므로, 한 번 로그아웃시켜 재로그인을 유도한다.
+  useEffect(() => {
+    if (hasSupabase && user && !user.inboxToken) {
+      clearSession()
+      setUser(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 다른 탭에서 로그인 / 로그아웃 했을 때 동기화
   useEffect(() => {

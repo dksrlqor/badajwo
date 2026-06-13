@@ -22,12 +22,13 @@ export default function Login() {
     else navigate('/me')
   }
 
-  const onCredential = (credentialResponse) => {
+  const onCredential = async (credentialResponse) => {
     if (!credentialResponse?.credential) {
       setError('구글 로그인 응답이 비어있어요.')
       return
     }
-    const res = signInWithGoogleCredential(credentialResponse.credential)
+    setError('')
+    const res = await signInWithGoogleCredential(credentialResponse.credential)
     if (!res.ok) {
       setError(res.reason || '로그인에 실패했어요.')
       return

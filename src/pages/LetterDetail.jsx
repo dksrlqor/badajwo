@@ -2,15 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import {
-  getLetter,
-  canViewLetter,
-  presentSender,
-  setLetterReply,
-  setLetterPublic,
-  setLetterArchived,
-  softDeleteLetter
-} from '../utils/storage'
+import { getLetterFor, updateLetterFor, presentSender, canViewLetter } from '../utils/storage'
 import Toast from '../components/Toast'
 import PixelWindow from '../components/pixel/PixelWindow'
 import PixelButton from '../components/pixel/PixelButton'
@@ -24,12 +16,33 @@ export default function LetterDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [letterState, setLetterState] = useState(() => getLetter(id))
+  const [letterState, setLetterState] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [phase, setPhase] = useState('envelope') // envelope | opening | content
   const [burst, setBurst] = useState(0)
   const [replyDraft, setReplyDraft] = useState('')
   const [toast, setToast] = useState({ message: '', show: false })
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    getLetterFor(id, user)
+      .then((l) => {
+        if (cancelled) return
+        setLetterState(l)
+        setLoading(false)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLetterState(null)
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, user?.id])
 
   useEffect(() => {
     setReplyDraft(letterState?.reply || '')
@@ -40,6 +53,21 @@ export default function LetterDetail() {
   const showToast = (m) => {
     setToast({ message: m, show: true })
     setTimeout(() => setToast({ message: '', show: false }), 2200)
+  }
+
+  if (loading) {
+    return (
+      <div className="pt-12 text-center">
+        <PixelWindow title="♡ 받아줘 ♡">
+          <div className="flex flex-col items-center py-4">
+            <PixelCat state="wait" px={6} />
+            <p className="mt-4 text-[13px]" style={{ color: 'var(--px-deep)' }}>
+              편지를 불러오는 중...
+            </p>
+          </div>
+        </PixelWindow>
+      </div>
+    )
   }
 
   if (!letterState) {
@@ -91,27 +119,45 @@ export default function LetterDetail() {
     window.setTimeout(() => setPhase('content'), 950)
   }
 
-  const togglePublic = () => {
+  const togglePublic = async () => {
     if (!isOwner) return
-    const next = setLetterPublic(letterState.id, !letterState.isPublic)
-    setLetterState(next)
-    showToast(next.isPublic ? '편지를 공개했어요.' : '편지를 비공개로 돌렸어요.')
+    const np = !letterState.isPublic
+    const ok = await updateLetterFor(letterState.id, user, { isPublic: np })
+    if (!ok) {
+      showToast('변경하지 못했어요. 잠시 후 다시 시도해주세요.')
+      return
+    }
+    setLetterState({ ...letterState, isPublic: np })
+    showToast(np ? '편지를 공개했어요.' : '편지를 비공개로 돌렸어요.')
   }
-  const toggleArchive = () => {
+  const toggleArchive = async () => {
     if (!isOwner) return
-    const next = setLetterArchived(letterState.id, !letterState.isArchived)
-    setLetterState(next)
-    showToast(next.isArchived ? '보관함으로 옮겼어요.' : '받은 편지함으로 되돌렸어요.')
+    const na = !letterState.isArchived
+    const ok = await updateLetterFor(letterState.id, user, { isArchived: na })
+    if (!ok) {
+      showToast('변경하지 못했어요. 잠시 후 다시 시도해주세요.')
+      return
+    }
+    setLetterState({ ...letterState, isArchived: na })
+    showToast(na ? '보관함으로 옮겼어요.' : '받은 편지함으로 되돌렸어요.')
   }
-  const saveReply = () => {
+  const saveReply = async () => {
     if (!isOwner) return
-    const next = setLetterReply(letterState.id, replyDraft)
-    setLetterState(next)
+    const ok = await updateLetterFor(letterState.id, user, { reply: replyDraft })
+    if (!ok) {
+      showToast('답장을 저장하지 못했어요. 잠시 후 다시 시도해주세요.')
+      return
+    }
+    setLetterState({ ...letterState, reply: replyDraft })
     showToast('답장을 저장했어요 ♡')
   }
-  const remove = () => {
+  const remove = async () => {
     if (!isOwner) return
-    softDeleteLetter(letterState.id)
+    const ok = await updateLetterFor(letterState.id, user, { isDeleted: true })
+    if (!ok) {
+      showToast('삭제하지 못했어요. 잠시 후 다시 시도해주세요.')
+      return
+    }
     showToast('편지를 삭제했어요.')
     setTimeout(() => navigate('/me'), 800)
   }

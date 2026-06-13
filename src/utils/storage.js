@@ -1006,3 +1006,236 @@ export function listItems() { return [] }
 export function listItemsBySender() { return [] }
 export function saveAskRequest() { return false }
 export function getAskRequest(id) { return getLegacyAskRequest(id) }
+
+// ============================================================
+// Supabase 프로필 / 받은편지 백엔드 (기기 간 동작)
+// ------------------------------------------------------------
+// hasSupabase === true 면 Supabase RPC 로 동작(다른 기기에서도 /u/:username 열림),
+// 아니면 위의 localStorage 함수로 폴백(같은 브라우저에서만).
+// 받은편지 열람은 프로필별 비밀 토큰(user.inboxToken)으로 보호한다.
+// 모든 함수는 async — 호출자는 await 필요.
+// ============================================================
+
+// username 정규화 — @ 제거 / 공백 / 소문자. 라우트·복사·조회 어디서든 동일 기준.
+export function normalizeUsername(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/^@+/, '')
+    .trim()
+    .toLowerCase()
+}
+
+// 로컬 캐시 — Supabase 가 돌려준 user(토큰 포함)를 이 브라우저에 보관해
+// 새로고침 후에도 받은편지함을 열 수 있게 한다.
+function cacheUser(user) {
+  if (!user || !user.id) return
+  const users = readJSON(USERS_KEY, {})
+  users[user.id] = user
+  writeJSON(USERS_KEY, users)
+}
+
+function rowToLetterRemote(r) {
+  if (!r) return null
+  return {
+    id: r.id,
+    receiverId: r.receiver_id,
+    receiverUsername: r.receiver_username,
+    senderMode: r.sender_mode,
+    senderUserId: r.sender_user_id || null,
+    senderUsername: r.sender_username || null,
+    senderName: r.sender_name || null,
+    content: r.content || '',
+    reply: r.reply || null,
+    isPublic: !!r.is_public,
+    isArchived: !!r.is_archived,
+    isDeleted: !!r.is_deleted,
+    createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+    updatedAt: r.updated_at ? new Date(r.updated_at).getTime() : Date.now()
+  }
+}
+
+// 로그인 — google_sub 기준 프로필 upsert. 반환 user 는 inboxToken 포함.
+export async function upsertGoogleProfile({ googleSub, email, displayName, profileImage }) {
+  if (!googleSub) return null
+  if (!hasSupabase) {
+    return findOrCreateGoogleUser({ googleSub, email, displayName, profileImage })
+  }
+  const { data, error } = await supabase.rpc('upsert_google_profile', {
+    p_google_sub: googleSub,
+    p_display_name: displayName || '',
+    p_profile_image: profileImage || ''
+  })
+  if (error || !data || !data[0]) {
+    console.warn('[badajwo] upsert_google_profile error', error)
+    return null
+  }
+  const row = data[0]
+  const user = {
+    id: row.id,
+    googleSub,
+    displayName: row.display_name || displayName || '',
+    username: row.username || null,
+    profileImage: row.profile_image || profileImage || '',
+    profileImageSource: row.profile_image || profileImage ? 'google' : 'default',
+    inboxToken: row.inbox_token,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  }
+  cacheUser(user)
+  return user
+}
+
+// username 설정/변경. 반환 { ok, user? , reason? }
+export async function setUsernameRemote(user, rawUsername) {
+  if (!user) return { ok: false, reason: '로그인이 필요해요.' }
+  const u = normalizeUsername(rawUsername)
+  if (!hasSupabase) return setUsername(user.id, u)
+  const { data, error } = await supabase.rpc('set_profile_username', {
+    p_id: user.id,
+    p_google_sub: user.googleSub,
+    p_username: u
+  })
+  if (error) {
+    console.warn('[badajwo] set_profile_username error', error)
+    return { ok: false, reason: '아이디를 저장하지 못했어요. 잠시 후 다시 시도해주세요.' }
+  }
+  if (data === 'ok') {
+    const next = { ...user, username: u, updatedAt: Date.now() }
+    cacheUser(next)
+    return { ok: true, user: next }
+  }
+  if (data === 'taken') return { ok: false, reason: '이미 누가 쓰고 있는 아이디예요.' }
+  if (data === 'invalid') return { ok: false, reason: '사용할 수 없는 아이디예요.' }
+  if (data === 'forbidden') return { ok: false, reason: '계정 확인에 실패했어요. 다시 로그인해주세요.' }
+  return { ok: false, reason: '아이디를 저장하지 못했어요.' }
+}
+
+// username 사용 가능 여부. 반환 true|false|null(알수없음/조회실패).
+export async function isUsernameAvailableRemote(rawUsername) {
+  const u = normalizeUsername(rawUsername)
+  if (!hasSupabase) return isUsernameAvailable(u)
+  const { data, error } = await supabase.rpc('username_available', { p_username: u })
+  if (error) {
+    console.warn('[badajwo] username_available error', error)
+    return null
+  }
+  return !!data
+}
+
+// 공개 프로필 조회. 반환 receiver | null(없음). 통신 오류는 throw → 호출자가 'error' 처리.
+export async function getPublicProfile(rawUsername) {
+  const u = normalizeUsername(rawUsername)
+  if (!u) return null
+  if (!hasSupabase) return getUserByUsername(u)
+  const { data, error } = await supabase.rpc('get_public_profile', { p_username: u })
+  if (error) {
+    console.warn('[badajwo] get_public_profile error', error)
+    throw error
+  }
+  if (!data || !data[0]) return null
+  const row = data[0]
+  return {
+    id: row.id,
+    username: row.username,
+    displayName: row.display_name || '',
+    profileImage: row.profile_image || '',
+    profileImageSource: row.profile_image ? 'google' : 'default'
+  }
+}
+
+// 편지 보내기. 반환 letter(성공) | null(실패).
+export async function sendLetterRemote(input) {
+  if (!hasSupabase) return saveLetter(input)
+  const { data, error } = await supabase.rpc('send_letter', {
+    p_receiver_username: input.receiverUsername,
+    p_sender_mode: input.senderMode,
+    p_sender_name: input.senderName || null,
+    p_sender_user_id: input.senderUserId || null,
+    p_sender_username: input.senderUsername || null,
+    p_content: input.content
+  })
+  if (error) {
+    console.warn('[badajwo] send_letter error', error)
+    return null
+  }
+  if (!data || data === 'not_found' || data === 'invalid') return null
+  return { id: data, ...input }
+}
+
+// 받은편지함 목록 (토큰 게이트). scope: 'inbox' | 'public' | 'archive'
+export async function listInbox(user, scope = 'inbox') {
+  if (!user) return []
+  if (!hasSupabase) {
+    if (scope === 'archive') return listArchiveFor(user.id)
+    if (scope === 'public') return listPublicFor(user.id)
+    return listInboxFor(user.id)
+  }
+  const { data, error } = await supabase.rpc('get_inbox', {
+    p_receiver_id: user.id,
+    p_token: user.inboxToken,
+    p_scope: scope
+  })
+  if (error) {
+    console.warn('[badajwo] get_inbox error', error)
+    return []
+  }
+  return (data || []).map(rowToLetterRemote)
+}
+
+// 단일 편지 조회 (토큰 게이트, 본인만).
+export async function getLetterFor(id, user) {
+  if (!id) return null
+  if (!hasSupabase) return getLetter(id)
+  if (!user?.inboxToken) return null
+  const { data, error } = await supabase.rpc('get_letter', {
+    p_id: id,
+    p_token: user.inboxToken
+  })
+  if (error) {
+    console.warn('[badajwo] get_letter error', error)
+    return null
+  }
+  if (!data || !data[0]) return null
+  return rowToLetterRemote(data[0])
+}
+
+// 편지 상태 변경 (토큰 게이트). patch: { reply?, isPublic?, isArchived?, isDeleted? }
+// 반환 true(성공) | null/false(실패).
+export async function updateLetterFor(id, user, patch = {}) {
+  if (!id) return null
+  if (!hasSupabase) return updateLetter(id, patch)
+  const { data, error } = await supabase.rpc('update_letter', {
+    p_id: id,
+    p_token: user?.inboxToken,
+    p_reply: patch.reply ?? null,
+    p_is_public: patch.isPublic ?? null,
+    p_is_archived: patch.isArchived ?? null,
+    p_is_deleted: patch.isDeleted ?? null
+  })
+  if (error) {
+    console.warn('[badajwo] update_letter error', error)
+    return null
+  }
+  return !!data
+}
+
+// 계정 삭제 (토큰 + google_sub 확인). 반환 { ok, reason? }
+export async function deleteAccountRemote(user) {
+  if (!user) return { ok: false, reason: '로그인이 필요해요.' }
+  if (!hasSupabase) return deleteAccount(user.id)
+  const { data, error } = await supabase.rpc('delete_account', {
+    p_id: user.id,
+    p_google_sub: user.googleSub,
+    p_token: user.inboxToken
+  })
+  if (error || !data) {
+    console.warn('[badajwo] delete_account error', error)
+    return { ok: false, reason: '삭제하지 못했어요. 잠시 후 다시 시도해주세요.' }
+  }
+  // 로컬 흔적도 정리
+  const users = readJSON(USERS_KEY, {})
+  delete users[user.id]
+  writeJSON(USERS_KEY, users)
+  clearSession()
+  return { ok: true }
+}
