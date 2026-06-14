@@ -1,544 +1,336 @@
-// 받아줘 — 인스타 스토리 공유용 이미지 생성기.
-// 1080 × 1920 portrait canvas 에 빈티지 airmail 봉투 + 받는 이름 + 링크를 그린다.
-// 결과 Blob 을 navigator.share files 로 OS 공유 시트에 넘기면, 인스타 → 스토리에 추가에서
-// 그대로 배경 이미지로 들어간다. (탭 가능한 링크 스티커는 웹에서 자동 주입 불가 — 인스타 자체 제약)
+// 받아줘 — 인스타 스토리 공유용 이미지 생성기 (8비트 픽셀 컨셉).
+// 1080 × 1920 portrait canvas 에 픽셀 윈도우 + 배달 고양이 + 받는 이름 + 링크를 그린다.
+// 색·도트·폰트는 사이트(pixel.css / PixelCat / Sprite)와 동일하게 맞춘다.
+// 결과 Blob 을 navigator.share files 로 OS 공유 시트에 넘기면 인스타 → 스토리에 추가로 들어간다.
+
+import { PX } from '../components/pixel/Sprite'
 
 const W = 1080
 const H = 1920
 
-const COLORS = {
-  paperTop: '#FDF8EE',
-  paperMid: '#FAF1E1',
-  paperBot: '#F2E2C6',
-  envelopeBg: '#FCF6E6',
-  airmailRed: '#C7443E',
-  airmailBlue: '#4E6B8A',
-  ink: '#3D2E22',
-  inkSoft: '#5A4538',
-  inkMuted: '#86705E',
-  inkFaded: '#B3987B',
-  stampLeaf: '#5C7050',
-  stampLeafSoft: '#7D9270',
-  stampLeafBright: '#8BA37E'
+// 디자인 토큰 — src/styles/pixel.css :root 와 동일.
+const C = {
+  bg: '#FFF7F3',
+  cream: '#FFFDF8',
+  surface: '#FFE1E8',
+  pink: '#F3A6B5',
+  deep: '#C96F7F',
+  border: '#9E5C64',
+  text: '#4A2F35',
+  heart: '#E45C7A',
+  white: '#FFFFFF',
+  shadow: 'rgba(158, 92, 100, 0.30)'
 }
 
-// 빈티지 종이 배경 + 미세 noise + 가장자리 vignette.
-function drawPaperBackground(ctx) {
-  // 세로 그라데이션
-  const g = ctx.createLinearGradient(0, 0, 0, H)
-  g.addColorStop(0, COLORS.paperTop)
-  g.addColorStop(0.55, COLORS.paperMid)
-  g.addColorStop(1, COLORS.paperBot)
-  ctx.fillStyle = g
+const FONT = "'Galmuri11', 'Galmuri9', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
+
+// ── 고양이 도트 (PixelCat.jsx 와 동일 그리드) ──────────────
+const CAT_BASE = [
+  '..oo........oo..',
+  '.occo......occo.',
+  '.ocpco....ocpco.',
+  '.occcooooooccco.',
+  '.occcccccccccco.',
+  'occtcccccccctcco',
+  'occtcccccccctcco',
+  'occccccddcccccco',
+  'ocpcccccccccpcco',
+  '.occcccccccccco.',
+  '.occcccccccccco.',
+  '.occcccccccccco.',
+  '.occooccccoocco.',
+  '..oooooooooooo..'
+]
+const TAIL_A = [
+  '...................',
+  '...................',
+  '...................',
+  '...................',
+  '...................',
+  '...................',
+  '.................oo',
+  '.................oo',
+  '................oo.',
+  '................oo.',
+  '................oo.',
+  '...............oo..',
+  '..............oo...'
+]
+const HOLD_ENVELOPE = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '...oooooooooo...',
+  '...owdwwwwdwo...',
+  '...owwddddwwo...',
+  '...owwwwwwwwo...',
+  '...oooooooooo...'
+]
+const HUG_HEART = [
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '................',
+  '....hh...hh.....',
+  '...hhhhhhhhh....',
+  '....hhhhhhh.....',
+  '.....hhhhh......',
+  '......hhh.......'
+]
+
+// 작은 하트 (타이틀/배경 패턴용)
+const HEART_MINI = [
+  '.hh.hh.',
+  'hhhhhhh',
+  'hhhhhhh',
+  '.hhhhh.',
+  '..hhh..',
+  '...h...'
+]
+
+// ── 헬퍼 ──────────────────────────────────────────────────
+// 문자 그리드 → 캔버스 픽셀(rect). Sprite.jsx 의 캔버스판.
+function drawSprite(ctx, grid, ox, oy, px, palette = PX) {
+  for (let y = 0; y < grid.length; y++) {
+    const row = grid[y]
+    for (let x = 0; x < row.length; x++) {
+      const fill = palette[row[x]]
+      if (!fill) continue
+      ctx.fillStyle = fill
+      ctx.fillRect(ox + x * px, oy + y * px, px, px)
+    }
+  }
+}
+
+// 단색 하트(특정 색) 그리드 그리기
+function drawHeart(ctx, ox, oy, px, color) {
+  drawSprite(ctx, HEART_MINI, ox, oy, px, { h: color })
+}
+
+// 크림 배경 + 흩뿌린 픽셀 하트 패턴
+function drawBackground(ctx) {
+  ctx.fillStyle = C.bg
   ctx.fillRect(0, 0, W, H)
 
-  // 따뜻한 빛 스폿
-  const r1 = ctx.createRadialGradient(W * 0.2, H * 0.18, 0, W * 0.2, H * 0.18, W * 0.55)
-  r1.addColorStop(0, 'rgba(255,255,255,0.22)')
-  r1.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = r1
-  ctx.fillRect(0, 0, W, H)
-
-  const r2 = ctx.createRadialGradient(W * 0.85, H * 0.78, 0, W * 0.85, H * 0.78, W * 0.5)
-  r2.addColorStop(0, 'rgba(180,135,95,0.10)')
-  r2.addColorStop(1, 'rgba(180,135,95,0)')
-  ctx.fillStyle = r2
-  ctx.fillRect(0, 0, W, H)
-
-  // 갈색 spots (오래된 종이 얼룩)
-  ctx.save()
-  for (let i = 0; i < 28; i++) {
-    const x = Math.random() * W
-    const y = Math.random() * H
-    const rx = 4 + Math.random() * 7
-    const ry = rx * (0.6 + Math.random() * 0.6)
-    ctx.fillStyle = `rgba(120, 80, 40, ${0.08 + Math.random() * 0.10})`
-    ctx.beginPath()
-    ctx.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2)
-    ctx.fill()
+  const px = 4
+  const hw = HEART_MINI[0].length * px // 28
+  const stepX = 150
+  const stepY = 150
+  let row = 0
+  for (let y = -hw; y < H + hw; y += stepY) {
+    const offset = row % 2 === 0 ? 0 : stepX / 2
+    let col = 0
+    for (let x = -hw + offset; x < W + hw; x += stepX) {
+      const usePink = (row + col) % 2 === 0
+      ctx.globalAlpha = usePink ? 0.16 : 0.1
+      drawHeart(ctx, x, y, px, usePink ? C.pink : C.heart)
+      col++
+    }
+    row++
   }
-  ctx.restore()
-
-  // 미세 noise — random dots
-  ctx.save()
-  ctx.globalAlpha = 0.05
-  for (let i = 0; i < 2400; i++) {
-    ctx.fillStyle = '#3D2E22'
-    ctx.fillRect(Math.random() * W, Math.random() * H, 1.4, 1.4)
-  }
-  ctx.restore()
-
-  // vignette
-  const vg = ctx.createRadialGradient(W / 2, H / 2, W * 0.45, W / 2, H / 2, W * 0.85)
-  vg.addColorStop(0, 'rgba(120,80,40,0)')
-  vg.addColorStop(1, 'rgba(120,80,40,0.22)')
-  ctx.fillStyle = vg
-  ctx.fillRect(0, 0, W, H)
+  ctx.globalAlpha = 1
 }
 
-// 빅토리안 ornament line — 작은 곡선과 다이아 마름모.
-function drawOrnamentLine(ctx, cx, cy, width = 360, color = COLORS.inkMuted) {
-  ctx.save()
-  ctx.translate(cx - width / 2, cy)
-  ctx.strokeStyle = color
-  ctx.lineWidth = 3
-  ctx.lineCap = 'round'
-  ctx.globalAlpha = 0.7
+// 픽셀 윈도우 (타이틀바 + 본문 + 하드 섀도)
+function drawWindow(ctx, x, y, w, h) {
+  const tbH = 124
+  const b = 8
 
-  // 좌측 곡선
-  ctx.beginPath()
-  ctx.moveTo(0, 0)
-  ctx.quadraticCurveTo(width * 0.08, -16, width * 0.18, 0)
-  ctx.stroke()
+  // 하드 섀도
+  ctx.fillStyle = C.shadow
+  ctx.fillRect(x + 18, y + 18, w, h)
 
-  // 좌측 다이아
-  ctx.beginPath()
-  ctx.moveTo(width * 0.22, 0)
-  ctx.lineTo(width * 0.25, -10)
-  ctx.lineTo(width * 0.28, 0)
-  ctx.lineTo(width * 0.25, 10)
-  ctx.closePath()
-  ctx.stroke()
+  // 본문 (크림)
+  ctx.fillStyle = C.cream
+  ctx.fillRect(x, y, w, h)
 
-  // 중앙 곡선
-  ctx.beginPath()
-  ctx.moveTo(width * 0.32, 0)
-  ctx.quadraticCurveTo(width * 0.42, -18, width * 0.5, 0)
-  ctx.quadraticCurveTo(width * 0.58, 18, width * 0.68, 0)
-  ctx.stroke()
+  // 타이틀바 (핑크)
+  ctx.fillStyle = C.pink
+  ctx.fillRect(x, y, w, tbH)
+  // 타이틀바 하단 경계
+  ctx.fillStyle = C.border
+  ctx.fillRect(x, y + tbH - b, w, b)
 
-  // 중앙 점
-  ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.arc(width * 0.5, 0, 4, 0, Math.PI * 2)
-  ctx.fill()
+  // 외곽 테두리
+  ctx.fillStyle = C.border
+  ctx.fillRect(x, y, w, b) // top
+  ctx.fillRect(x, y + h - b, w, b) // bottom
+  ctx.fillRect(x, y, b, h) // left
+  ctx.fillRect(x + w - b, y, b, h) // right
 
-  // 우측 다이아
-  ctx.beginPath()
-  ctx.moveTo(width * 0.72, 0)
-  ctx.lineTo(width * 0.75, -10)
-  ctx.lineTo(width * 0.78, 0)
-  ctx.lineTo(width * 0.75, 10)
-  ctx.closePath()
-  ctx.stroke()
-
-  // 우측 곡선
-  ctx.beginPath()
-  ctx.moveTo(width * 0.82, 0)
-  ctx.quadraticCurveTo(width * 0.92, -16, width, 0)
-  ctx.stroke()
-
-  ctx.restore()
-}
-
-// airmail 봉투 외곽의 빨강/파랑 사선 띠.
-function drawAirmailBorder(ctx, x, y, w, h, borderWidth = 24) {
-  ctx.save()
-  // 1) 봉투 자체 박스 (그림자 포함)
-  ctx.shadowColor = 'rgba(92, 62, 40, 0.30)'
-  ctx.shadowBlur = 40
-  ctx.shadowOffsetY = 24
-  ctx.fillStyle = COLORS.envelopeBg
-  roundRect(ctx, x, y, w, h, 18)
-  ctx.fill()
-  ctx.shadowColor = 'transparent'
-  ctx.shadowBlur = 0
-  ctx.shadowOffsetY = 0
-
-  // 2) 외곽 띠 영역만 클립 — 사각형 두 개의 even-odd
-  ctx.save()
-  ctx.beginPath()
-  roundRect(ctx, x, y, w, h, 18)
-  roundRect(ctx, x + borderWidth, y + borderWidth, w - 2 * borderWidth, h - 2 * borderWidth, 10)
-  ctx.clip('evenodd')
-
-  // 3) 클립 안에 빨강/파랑 사선 패턴
-  const stripeSize = 38
-  const colors = [COLORS.airmailRed, COLORS.envelopeBg, COLORS.airmailBlue, COLORS.envelopeBg]
-  ctx.save()
-  ctx.translate(x + w / 2, y + h / 2)
-  ctx.rotate(Math.PI / 4) // 45도
-  const reach = Math.max(w, h) * 1.5
-  for (let i = -reach; i < reach; i += stripeSize) {
-    ctx.fillStyle = colors[Math.floor((i + reach) / stripeSize) % colors.length]
-    ctx.fillRect(i, -reach, stripeSize, reach * 2)
-  }
-  ctx.restore()
-  ctx.restore()
-
-  // 4) inner 면 위 미세 grain
-  ctx.save()
-  ctx.beginPath()
-  roundRect(ctx, x + borderWidth + 2, y + borderWidth + 2, w - 2 * borderWidth - 4, h - 2 * borderWidth - 4, 8)
-  ctx.clip()
-  ctx.globalAlpha = 0.06
-  for (let i = 0; i < 600; i++) {
-    ctx.fillStyle = '#3D2E22'
-    ctx.fillRect(x + Math.random() * w, y + Math.random() * h, 1.4, 1.4)
-  }
-  ctx.restore()
-
-  ctx.restore()
-}
-
-// 잎 일러스트 우표 (톱니 가장자리는 단순화 — 작은 점 둘레로 표현)
-function drawStamp(ctx, x, y, w, h, rotation = -0.08) {
-  ctx.save()
-  ctx.translate(x + w / 2, y + h / 2)
-  ctx.rotate(rotation)
-  ctx.translate(-w / 2, -h / 2)
-
-  // 그림자
-  ctx.shadowColor = 'rgba(92, 62, 40, 0.35)'
-  ctx.shadowBlur = 18
-  ctx.shadowOffsetY = 10
-
-  // 톱니 흉내 — 외곽
-  ctx.fillStyle = '#F8EFD8'
-  roundRect(ctx, 0, 0, w, h, 4)
-  ctx.fill()
-
-  ctx.shadowColor = 'transparent'
-  ctx.shadowBlur = 0
-  ctx.shadowOffsetY = 0
-
-  // 톱니 점들
-  ctx.fillStyle = COLORS.paperTop
-  const perfStep = 14
-  for (let i = perfStep / 2; i < w; i += perfStep) {
-    ctx.beginPath()
-    ctx.arc(i, 0, 5, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(i, h, 5, 0, Math.PI * 2)
-    ctx.fill()
-  }
-  for (let i = perfStep / 2; i < h; i += perfStep) {
-    ctx.beginPath()
-    ctx.arc(0, i, 5, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(w, i, 5, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  // 안쪽 색지
-  const inset = 12
-  ctx.fillStyle = COLORS.envelopeBg
-  roundRect(ctx, inset, inset, w - 2 * inset, h - 2 * inset, 2)
-  ctx.fill()
-  ctx.strokeStyle = COLORS.stampLeaf
-  ctx.lineWidth = 3
-  ctx.stroke()
-
-  // 잎 일러스트 (간단화)
-  ctx.save()
-  ctx.translate(w / 2, h / 2 - 14)
-  ctx.strokeStyle = COLORS.stampLeaf
-  ctx.lineWidth = 3
-  ctx.beginPath()
-  ctx.moveTo(0, 40)
-  ctx.lineTo(0, -40)
-  ctx.stroke()
-  // 잎사귀들
-  const leaves = [
-    { x: -22, y: -28, rx: 18, ry: 8, rot: -0.5, c: COLORS.stampLeafSoft },
-    { x: 22, y: -22, rx: 18, ry: 8, rot: 0.5, c: COLORS.stampLeafBright },
-    { x: -25, y: -4, rx: 20, ry: 9, rot: -0.45, c: COLORS.stampLeaf },
-    { x: 25, y: 2, rx: 20, ry: 9, rot: 0.5, c: COLORS.stampLeafSoft },
-    { x: -22, y: 22, rx: 18, ry: 8, rot: -0.4, c: COLORS.stampLeafBright },
-    { x: 22, y: 28, rx: 18, ry: 8, rot: 0.45, c: COLORS.stampLeaf }
-  ]
-  leaves.forEach((l) => {
-    ctx.save()
-    ctx.translate(l.x, l.y)
-    ctx.rotate(l.rot)
-    ctx.fillStyle = l.c
-    ctx.beginPath()
-    ctx.ellipse(0, 0, l.rx, l.ry, 0, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
-  })
-  ctx.restore()
-
-  // POSTAGE 텍스트
-  ctx.fillStyle = COLORS.stampLeaf
-  ctx.font = '600 18px Georgia, serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'alphabetic'
-  ctx.fillText('POSTAGE', w / 2, h - 22)
-
-  ctx.restore()
-}
-
-// 우편 소인 — dashed 둥근 원 + 도시명 + 받아줘 마크
-function drawPostmark(ctx, cx, cy, radius, rotation = -0.2, city = 'SEOUL', date = null) {
-  ctx.save()
-  ctx.translate(cx, cy)
-  ctx.rotate(rotation)
-  const color = 'rgba(78, 107, 138, 0.65)'
-  ctx.strokeStyle = color
-  ctx.lineWidth = 3
-  ctx.setLineDash([10, 8])
-  ctx.beginPath()
-  ctx.arc(0, 0, radius, 0, Math.PI * 2)
-  ctx.stroke()
-  ctx.lineWidth = 2
-  ctx.setLineDash([5, 5])
-  ctx.beginPath()
-  ctx.arc(0, 0, radius * 0.72, 0, Math.PI * 2)
-  ctx.stroke()
-  ctx.setLineDash([])
-
-  // 위 아치 텍스트 — city
-  ctx.fillStyle = color
-  ctx.font = '600 24px Georgia, serif'
-  ctx.textAlign = 'center'
-  drawTextOnArc(ctx, city, 0, 0, radius * 0.86, -Math.PI / 2, 0.012)
-
-  // 아래 아치 — 날짜
-  const today = date || new Date()
-  const dStr = `${today.getDate()}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`
-  ctx.font = '500 20px Georgia, serif'
-  drawTextOnArc(ctx, dStr, 0, 0, radius * 0.86, Math.PI / 2, -0.012, true)
-
-  // 중앙 받아줘
-  ctx.fillStyle = color
-  ctx.font = '600 22px Georgia, serif'
+  // 타이틀: ♡ 받아줘 ♡
+  const cx = x + w / 2
+  const ty = y + tbH / 2
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('받아줘', 0, 4)
+  ctx.font = `700 50px ${FONT}`
+  const title = '받아줘'
+  const tW = ctx.measureText(title).width
+  ctx.fillStyle = C.text
+  ctx.fillText(title, cx, ty + 2)
+  // 양옆 픽셀 하트
+  const hpx = 5
+  const heartW = HEART_MINI[0].length * hpx
+  const heartH = HEART_MINI.length * hpx
+  drawHeart(ctx, cx - tW / 2 - 46 - heartW / 2, ty - heartH / 2, hpx, C.heart)
+  drawHeart(ctx, cx + tW / 2 + 46 - heartW / 2, ty - heartH / 2, hpx, C.heart)
 
-  ctx.restore()
-}
-
-// 작은 헬퍼들 ─────────────────────────────────────────────
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-  ctx.lineTo(x + r, y + h)
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
-  ctx.closePath()
-}
-
-function drawTextOnArc(ctx, text, cx, cy, radius, centerAngle, charStep, flip = false) {
-  ctx.save()
-  const chars = Array.from(text)
-  const totalAngle = (chars.length - 1) * charStep
-  let angle = centerAngle - totalAngle / 2
-  if (flip) angle = centerAngle + totalAngle / 2
-  chars.forEach((ch) => {
-    ctx.save()
-    ctx.translate(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius)
-    ctx.rotate(flip ? angle - Math.PI / 2 : angle + Math.PI / 2)
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(ch, 0, 0)
-    ctx.restore()
-    angle += flip ? -charStep : charStep
-  })
-  ctx.restore()
-}
-
-// 마스킹테이프 한 조각
-function drawMaskingTape(ctx, x, y, w, h, rotation, color) {
-  ctx.save()
-  ctx.translate(x + w / 2, y + h / 2)
-  ctx.rotate(rotation)
-  ctx.translate(-w / 2, -h / 2)
-  // 본체 (반투명 사선 패턴)
-  ctx.shadowColor = 'rgba(92,62,40,0.25)'
-  ctx.shadowBlur = 14
-  ctx.shadowOffsetY = 6
-  ctx.fillStyle = color
-  ctx.fillRect(0, 0, w, h)
-  ctx.shadowColor = 'transparent'
-  ctx.shadowBlur = 0
-  ctx.shadowOffsetY = 0
-  // 사선 light streaks
-  ctx.save()
-  ctx.beginPath()
-  ctx.rect(0, 0, w, h)
-  ctx.clip()
-  ctx.globalAlpha = 0.4
-  ctx.fillStyle = 'rgba(255,255,255,0.4)'
-  for (let i = -h; i < w + h; i += 18) {
-    ctx.beginPath()
-    ctx.moveTo(i, 0)
-    ctx.lineTo(i + h, h)
-    ctx.lineTo(i + h - 9, h)
-    ctx.lineTo(i - 9, 0)
-    ctx.closePath()
-    ctx.fill()
+  // 우상단 컨트롤 칩 2개
+  const chip = 26
+  const chipY = y + (tbH - b - chip) / 2
+  for (let i = 0; i < 2; i++) {
+    const chipX = x + w - 40 - (1 - i) * (chip + 12) - chip
+    ctx.fillStyle = C.cream
+    ctx.fillRect(chipX, chipY, chip, chip)
+    ctx.fillStyle = C.border
+    ctx.lineWidth = 3
+    ctx.strokeRect(chipX + 1.5, chipY + 1.5, chip - 3, chip - 3)
   }
-  ctx.restore()
-  ctx.restore()
+
+  return { bodyTop: y + tbH, bodyLeft: x + b, bodyRight: x + w - b }
 }
 
-// 메인 — 스토리 이미지 빌더 ─────────────────────────────
-// type: 'ask' (나한테 편지 써줘) | 'sent' (편지 보냈어요)
-export async function buildStoryImage({
-  type = 'ask',
-  receiverName = '',
-  url,
-  scale = 1
-}) {
+// 픽셀 버튼/박스 (사각형 + 두꺼운 테두리 + 하드 섀도)
+function drawPixelBox(ctx, x, y, w, h, { fill, border = C.border, shadow = true }) {
+  if (shadow) {
+    ctx.fillStyle = C.shadow
+    ctx.fillRect(x + 8, y + 8, w, h)
+  }
+  ctx.fillStyle = fill
+  ctx.fillRect(x, y, w, h)
+  const b = 6
+  ctx.fillStyle = border
+  ctx.fillRect(x, y, w, b)
+  ctx.fillRect(x, y + h - b, w, b)
+  ctx.fillRect(x, y, b, h)
+  ctx.fillRect(x + w - b, y, b, h)
+}
+
+// ── 메인 — 스토리 이미지 빌더 ─────────────────────────────
+// type: 'ask' (나에게 편지 써줘) | 'sent' (편지가 도착했어요)
+export async function buildStoryImage({ type = 'ask', receiverName = '', url }) {
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
   const ctx = canvas.getContext('2d')
+  ctx.imageSmoothingEnabled = false
 
-  drawPaperBackground(ctx)
+  // Galmuri 폰트 로드 보장 (안 되면 시스템 폰트로라도 진행)
+  if (typeof document !== 'undefined' && document.fonts) {
+    try {
+      await Promise.all([
+        document.fonts.load(`700 72px 'Galmuri11'`),
+        document.fonts.load(`400 36px 'Galmuri11'`)
+      ])
+      await document.fonts.ready
+    } catch {}
+  }
 
-  // 상단 takemyletter.site 작은 마크
-  ctx.fillStyle = COLORS.inkMuted
-  ctx.font = '600 30px Georgia, serif'
+  drawBackground(ctx)
+
+  // 상단 사이트 마크
   ctx.textAlign = 'center'
   ctx.textBaseline = 'alphabetic'
-  ctx.fillText('takemyletter.site', W / 2, 160)
+  ctx.fillStyle = C.deep
+  ctx.font = `700 34px ${FONT}`
+  ctx.fillText('takemyletter.site', W / 2, 150)
+
+  // 윈도우
+  const wx = 70
+  const wy = 280
+  const ww = W - 2 * wx
+  const wh = 1180
+  const { bodyTop, bodyLeft, bodyRight } = drawWindow(ctx, wx, wy, ww, wh)
+  const cx = W / 2
+  const bodyW = bodyRight - bodyLeft
+
+  // 배달 고양이 (ask=봉투 / sent=하트 안기)
+  const catPx = 17
+  const catW = 16 * catPx
+  const catOx = cx - catW / 2
+  const catOy = bodyTop + 70
+  drawSprite(ctx, TAIL_A, catOx, catOy, catPx)
+  drawSprite(ctx, CAT_BASE, catOx, catOy, catPx)
+  drawSprite(ctx, type === 'sent' ? HUG_HEART : HOLD_ENVELOPE, catOx, catOy, catPx)
 
   // 헤드라인
-  ctx.fillStyle = COLORS.ink
-  if (type === 'ask') {
-    ctx.font = 'italic bold 96px "Times New Roman", Georgia, serif'
-    ctx.fillText('나한테 편지 써줘', W / 2, 290)
-  } else {
-    ctx.font = 'italic bold 96px "Times New Roman", Georgia, serif'
-    ctx.fillText('편지가 도착했어요', W / 2, 290)
-  }
-
-  drawOrnamentLine(ctx, W / 2, 360, 360, COLORS.inkMuted)
-
-  // 봉투
-  const eX = 90
-  const eY = 470
-  const eW = W - 2 * eX
-  const eH = 800
-  ctx.save()
-  ctx.translate(W / 2, eY + eH / 2)
-  ctx.rotate(-0.025)
-  ctx.translate(-W / 2, -(eY + eH / 2))
-  drawAirmailBorder(ctx, eX, eY, eW, eH, 28)
-
-  // AIR MAIL 라벨
-  ctx.fillStyle = '#F8EFD8'
-  roundRect(ctx, eX + 60, eY + 70, 380, 60, 6)
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(92,62,40,0.42)'
-  ctx.lineWidth = 2
-  ctx.setLineDash([6, 5])
-  ctx.stroke()
-  ctx.setLineDash([])
-  ctx.fillStyle = COLORS.inkSoft
-  ctx.font = '600 28px Georgia, serif'
   ctx.textAlign = 'center'
-  ctx.fillText(type === 'ask' ? '나한테 편지 써줘' : 'AIR MAIL · PAR AVION', eX + 60 + 190, eY + 109)
-
-  // 봉투 안 — TO. 라벨
-  ctx.fillStyle = COLORS.inkMuted
-  ctx.font = '600 36px Georgia, serif'
-  ctx.textAlign = 'left'
-  ctx.fillText('TO.', eX + 70, eY + 360)
-
-  // 받는 이름 — 큰 손글씨
-  ctx.fillStyle = COLORS.ink
-  ctx.font = 'italic bold 130px "Times New Roman", Georgia, serif'
-  const displayName = (receiverName || '').slice(0, 12)
-  ctx.fillText(displayName, eX + 70, eY + 500)
-
-  // 이름 아래 밑줄
-  ctx.strokeStyle = 'rgba(92, 62, 40, 0.5)'
-  ctx.lineWidth = 5
-  ctx.beginPath()
-  ctx.moveTo(eX + 70, eY + 524)
-  ctx.lineTo(eX + eW - 70, eY + 524)
-  ctx.stroke()
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillStyle = C.text
+  ctx.font = `700 76px ${FONT}`
+  ctx.fillText(type === 'sent' ? '편지가 도착했어요' : '나에게 편지 써줘', cx, catOy + 14 * catPx + 120)
 
   // 부제
-  if (type === 'ask') {
-    ctx.fillStyle = COLORS.inkMuted
-    ctx.font = 'italic 40px Georgia, serif'
-    ctx.fillText('— 친구야, 편지 한 통 써줄래?', eX + 70, eY + 610)
-  } else {
-    ctx.fillStyle = COLORS.inkMuted
-    ctx.font = 'italic 40px Georgia, serif'
-    ctx.fillText('— 너에게 도착한 편지', eX + 70, eY + 610)
-  }
-  ctx.restore()
-
-  // 봉투 위 우표 + 소인 (회전 적용된 봉투 좌표 위에 별도로)
-  ctx.save()
-  ctx.translate(W / 2, eY + eH / 2)
-  ctx.rotate(-0.025)
-  ctx.translate(-W / 2, -(eY + eH / 2))
-  // 우표 (우상단)
-  drawStamp(ctx, eX + eW - 200, eY + 60, 160, 200, -0.08)
-  // 소인 (우표 좌측 살짝 겹침)
-  drawPostmark(ctx, eX + eW - 280, eY + 230, 90, -0.18, type === 'ask' ? 'LETTER' : 'SEOUL')
-  ctx.restore()
-
-  // 봉투 위 마스킹테이프 — 모서리에 살짝
-  drawMaskingTape(ctx, eX + 80, eY - 30, 160, 50, -0.18, 'rgba(220, 200, 170, 0.78)')
-  drawMaskingTape(ctx, eX + eW - 220, eY - 22, 150, 46, 0.16, 'rgba(178, 198, 168, 0.82)')
-
-  // 봉투 아래 — 안내 문구 + 링크
-  ctx.fillStyle = COLORS.inkSoft
-  ctx.font = '600 38px Georgia, serif'
-  ctx.textAlign = 'center'
+  ctx.fillStyle = C.deep
+  ctx.font = `400 36px ${FONT}`
   ctx.fillText(
-    type === 'ask' ? '링크를 누르면 너에게 편지를 쓸 수 있어' : '링크를 누르면 편지를 열어볼 수 있어',
-    W / 2,
-    1410
+    type === 'sent' ? '너에게 도착한 작은 마음' : '익명으로도, 이름을 적어서도 괜찮아',
+    cx,
+    catOy + 14 * catPx + 184
   )
 
-  // 링크 박스
-  const lX = 120
-  const lY = 1470
-  const lW = W - 2 * lX
-  const lH = 130
-  ctx.save()
-  ctx.shadowColor = 'rgba(92,62,40,0.20)'
-  ctx.shadowBlur = 24
-  ctx.shadowOffsetY = 10
-  ctx.fillStyle = '#FBF0DC'
-  roundRect(ctx, lX, lY, lW, lH, 16)
-  ctx.fill()
-  ctx.restore()
-  ctx.strokeStyle = 'rgba(92,62,40,0.30)'
-  ctx.lineWidth = 2
-  ctx.setLineDash([8, 6])
-  roundRect(ctx, lX, lY, lW, lH, 16)
-  ctx.stroke()
-  ctx.setLineDash([])
+  // TO. 박스 (받는 이름)
+  const toY = catOy + 14 * catPx + 250
+  const toH = 168
+  const toX = bodyLeft + 40
+  const toW = bodyW - 80
+  drawPixelBox(ctx, toX, toY, toW, toH, { fill: C.surface })
+  ctx.textAlign = 'left'
+  ctx.fillStyle = C.deep
+  ctx.font = `700 30px ${FONT}`
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillText('TO.', toX + 44, toY + 58)
+  ctx.fillStyle = C.text
+  ctx.font = `700 76px ${FONT}`
+  const name = (receiverName || '').slice(0, 16)
+  ctx.fillText(name, toX + 44, toY + 132)
 
-  // 링크 본문 — 너무 길면 줄임
-  let displayUrl = url || ''
-  displayUrl = displayUrl.replace(/^https?:\/\//, '')
-  if (displayUrl.length > 36) displayUrl = displayUrl.slice(0, 33) + '…'
-  ctx.fillStyle = COLORS.ink
-  ctx.font = '600 38px Georgia, serif'
+  // 안내 문구
+  ctx.textAlign = 'center'
+  ctx.fillStyle = C.text
+  ctx.font = `400 36px ${FONT}`
+  ctx.fillText(
+    type === 'sent' ? '아래 링크로 편지를 열어볼 수 있어' : '아래 링크를 누르면 나에게 편지를 쓸 수 있어',
+    cx,
+    toY + toH + 90
+  )
+
+  // 링크 버튼 (딥핑크)
+  const lY = toY + toH + 140
+  const lH = 132
+  const lX = bodyLeft + 40
+  const lW = bodyW - 80
+  drawPixelBox(ctx, lX, lY, lW, lH, { fill: C.deep })
+  let displayUrl = (url || 'takemyletter.site').replace(/^https?:\/\//, '')
+  if (displayUrl.length > 30) displayUrl = displayUrl.slice(0, 29) + '…'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(displayUrl, W / 2, lY + lH / 2)
+  ctx.fillStyle = C.cream
+  ctx.font = `700 42px ${FONT}`
+  ctx.fillText(displayUrl, cx, lY + lH / 2 + 2)
 
-  // 하단 ornament + 안내
-  drawOrnamentLine(ctx, W / 2, 1700, 280, COLORS.inkMuted)
-  ctx.fillStyle = COLORS.inkMuted
-  ctx.font = 'italic 30px Georgia, serif'
+  // 하단 태그라인
   ctx.textBaseline = 'alphabetic'
   ctx.textAlign = 'center'
-  ctx.fillText('takemyletter.site', W / 2, 1780)
-  ctx.font = '500 24px Georgia, serif'
-  ctx.fillStyle = COLORS.inkFaded
-  ctx.fillText('말로 하기 어려운 마음을, 편지로', W / 2, 1830)
+  drawHeart(ctx, cx - 9, 1700, 3, C.heart)
+  ctx.fillStyle = C.deep
+  ctx.font = `700 36px ${FONT}`
+  ctx.fillText('받아줘 · takemyletter.site', cx, 1790)
+  ctx.fillStyle = C.text
+  ctx.font = `400 28px ${FONT}`
+  ctx.fillText('말로 하기 어려운 마음을, 픽셀 편지로', cx, 1842)
 
-  // Blob
   return await new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
