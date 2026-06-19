@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import BrandLogo from './BrandLogo'
-import { BRAND, SNS_LINKS, CONTACT_EMAIL, BUSINESS } from '../config/site'
+import { BRAND, SNS_LINKS, CONTACT_EMAIL } from '../config/site'
 
 // 받아줘 공통 footer.
 //   variant="full"    메인·작성 등 일반 페이지 — 로고/소개 + 링크 정리
@@ -40,15 +40,6 @@ export default function Footer({ variant = 'full' }) {
 
   const snsLinks = SNS_LINKS.filter((l) => l && l.href)
 
-  // 사업자 정보 — 값이 있는 항목만 가운뎃점으로 이어 한 줄로.
-  const businessText = [
-    BUSINESS.company && `상호: ${BUSINESS.company}`,
-    BUSINESS.owner && `대표: ${BUSINESS.owner}`,
-    BUSINESS.registrationNo && `사업자등록번호: ${BUSINESS.registrationNo}`
-  ]
-    .filter(Boolean)
-    .join(' · ')
-
   return (
     <footer className="px-footer mt-12 px-5 py-6">
       <div className="flex flex-col gap-5 sm:flex-row sm:justify-between sm:gap-8 text-center sm:text-left">
@@ -87,17 +78,8 @@ export default function Footer({ variant = 'full' }) {
         </nav>
       </div>
 
-      {businessText && (
-        <p
-          className="mt-5 text-center text-[11px] leading-relaxed"
-          style={{ color: 'var(--px-deep)' }}
-        >
-          {businessText}
-        </p>
-      )}
-
       <p
-        className="mt-4 pt-3 text-center text-[11px]"
+        className="mt-5 pt-3 text-center text-[11px]"
         style={{
           color: 'var(--px-deep)',
           borderTop: '2px dashed rgba(158, 92, 100, 0.25)'
