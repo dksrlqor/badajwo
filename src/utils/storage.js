@@ -1239,3 +1239,34 @@ export async function deleteAccountRemote(user) {
   clearSession()
   return { ok: true }
 }
+
+// 관리자 통계 — 가입/편지 수. 관리자 토큰일 때만 반환, 아니면 null(권한 없음).
+// 통신 오류는 throw → 호출자가 'error' 처리.
+export async function getAdminStats(user) {
+  if (!hasSupabase) {
+    // 로컬 폴백 (개발용) — localStorage 기준 카운트
+    const users = Object.values(readJSON(USERS_KEY, {}))
+    const letters = Object.values(readJSON(LETTERS_KEY, {})).filter((l) => !l.isDeleted)
+    const simple = Object.values(readJSON(SIMPLE_LETTERS_KEY, {})).filter((l) => !l.isDeleted)
+    return {
+      signups: users.length,
+      named: users.filter((u) => u.username).length,
+      inboxLetters: letters.length,
+      simpleLetters: simple.length
+    }
+  }
+  if (!user?.inboxToken) return null
+  const { data, error } = await supabase.rpc('get_admin_stats', { p_token: user.inboxToken })
+  if (error) {
+    console.warn('[badajwo] get_admin_stats error', error)
+    throw error
+  }
+  if (!data || !data[0]) return null // 권한 없음
+  const r = data[0]
+  return {
+    signups: Number(r.signups) || 0,
+    named: Number(r.named) || 0,
+    inboxLetters: Number(r.inbox_letters) || 0,
+    simpleLetters: Number(r.simple_letters) || 0
+  }
+}

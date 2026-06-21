@@ -15,6 +15,7 @@ import QuickView from './pages/QuickView'
 import LetterDetail from './pages/LetterDetail'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import Admin from './pages/Admin'
 import NotFound from './pages/NotFound'
 
 // 받아줘 — 라우트 구조 (v3)
@@ -84,6 +85,16 @@ export default function App() {
       {/* 정책 문서 — 픽셀 Layout(480px) 대신 DocPage 자체 760px 컬럼 사용 */}
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/terms" element={<Terms />} />
+
+      {/* 관리자 통계 — 로그인한 관리자 계정에서만 숫자가 보인다 */}
+      <Route
+        path="/admin"
+        element={
+          <Layout>
+            <Admin />
+          </Layout>
+        }
+      />
 
       <Route
         path="/me"
